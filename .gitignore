@@ -1,0 +1,9 @@
+# Python
+__pycache__
+
+# Messages / Key
+config.py
+
+# DB
+users.db
+collections.db
