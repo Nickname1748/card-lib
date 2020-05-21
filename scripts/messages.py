@@ -25,5 +25,17 @@ class Texts():
         return 'Вы создали новую коллекцию!'
 
     @staticmethod
+    def msg_err_collection_create():
+        return 'Ошибка создания новой коллекции!'
+
+    @staticmethod
+    def msg_err_solution_collection_create():
+        return 'Вы уже находитесь в процессе создания коллекции. Завершите или отмените операцию.'
+
+    @staticmethod
     def msg_delete_collection():
         return 'Удаление коллекции.'
+
+    @staticmethod
+    def msg_cancel():
+        return 'Операция прервана.'

@@ -3,7 +3,7 @@ import sqlite3
 
 class Create():
     
-    def create_users_db(self, db_name='users_n', table_name='table_m'):
+    def create_users_db(self, db_name='users', table_name='user'):
         connect = sqlite3.connect(f'{db_name}.db')
         cursor = connect.cursor()
         cursor.execute(f'CREATE TABLE {table_name}' \
@@ -11,8 +11,7 @@ class Create():
                         ' session text)')
         connect.commit()
 
-
-    def create_collections_db(self, db_name='collections_n', table_name='table_m'):
+    def create_collections_db(self, db_name='collections', table_name='collection'):
         connect = sqlite3.connect(f'{db_name}.db')
         cursor = connect.cursor()
         cursor.execute(f'CREATE TABLE {table_name}' \
@@ -25,12 +24,11 @@ class Create():
 class Insert():
 
     def __init__(self, user_id='123456789',
-                db_name='name_n', table_name='table_m'):
+                db_name='db_name', table_name='table_name'):
 
         self.user_id = user_id
         self.db_name = db_name
         self.table_name = table_name
-
 
     def new_user(self):
         '''Insert a new user to the database.
@@ -47,7 +45,6 @@ class Insert():
                             ' VALUES (?,?,?)', (self.user_id, 0, ''))
         connect.commit()
 
-
     def session_reservation(self, key='k-123456-0987-z'):
         '''Create a new collection.
 
@@ -61,8 +58,7 @@ class Insert():
                         (self.user_id, key, '', 0, ''))
         connect.commit()
 
-
-    def session_insert(self, name='collection_a',
+    def session_insert(self, name='collection_n',
                         key='k-123456-0987-z', creation_date='DD/MM/YY'):
         '''Insert collection to the database.
 
@@ -80,7 +76,6 @@ class Insert():
                         ' WHERE (user_id=?) AND (key=?)',
                         (creation_date, self.user_id, key))
         connect.commit()
-    
 
     def user_activity(self, active=0, session='k-123456-0987-z'):
         '''Tracking user activity in the bot.
@@ -97,16 +92,27 @@ class Insert():
                         ' WHERE user_id=?', (session, self.user_id))
         connect.commit()
 
+    def delete_collection(self, key='k-123456-0987-z'):
+        '''Deletes a session or collection from the database.
+
+        :param session: Active session
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'DELETE FROM {self.table_name}' \
+                        ' WHERE (user_id=?) AND (key=?)', (self.user_id, key))
+        connect.commit()
+
 
 class Fetch():
 
     def __init__(self, user_id='123456789',
-                db_name='name_n', table_name='table_m'):
+                db_name='db_name', table_name='table_name'):
 
         self.user_id = user_id
         self.db_name = db_name
         self.table_name = table_name
-
 
     def search_collections(self):
         '''Search collections in the database.
@@ -126,7 +132,6 @@ class Fetch():
         else:
             connect.commit()
             return None
-
 
     def user_activity_status(self):
         '''Search for user information in the database.
