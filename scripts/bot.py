@@ -3,10 +3,11 @@ from telebot import types
 
 from config import token
 from messages import Texts as texts
-from database import Insert, Fetch
+from database import Insert, Delete, Fetch
 
 import random
 from datetime import datetime
+import re
 
 bot = telebot.TeleBot(token=token)
 
@@ -30,6 +31,9 @@ def bot_collections(message):
 
 @bot.message_handler(commands=['new_collection'])
 def bot_new_collection(message):
+    if error_handler(message=message):
+        return
+
     bot.send_message(chat_id=message.chat.id, text=texts.msg_new_collection())
 
     # Creating a collection and generating a unique key.
@@ -37,32 +41,58 @@ def bot_new_collection(message):
     new_key = f'k-{random.randint(100000, 1000000)}-{random.randint(1000, 10000)}-z'
     insert_new_collection.session_reservation(key=new_key)
 
-    user_activity_change = Insert(user_id=message.chat.id, db_name='users', table_name='user')
-    user_activity_change.user_activity(active=1, session=new_key)
+    user_insert = Insert(user_id=message.chat.id, db_name='users', table_name='user')
+    user_insert.user_activity(active=1, session=new_key)
 
     bot.register_next_step_handler(message=message, callback=register_collection_name)
-
-@bot.message_handler(commands=['delete_collection'])
-def bot_delete_collection(message):
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_delete_collection())
 
 @bot.message_handler(commands=['cancel'])
 def bot_cancel(message):
     bot.send_message(chat_id=message.chat.id, text=texts.msg_cancel())
 
-    user_activity_status = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
-    session = user_activity_status.user_activity_status()[0][2]
+    user_fetch = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
+    session = user_fetch.user_activity_status()[0][2]
 
-    delete_session = Insert(user_id=message.chat.id, db_name='collections', table_name='collection')
+    delete_session = Delete(user_id=message.chat.id, db_name='collections', table_name='collection')
     delete_session.delete_collection(key=session)
 
-    user_activity_change = Insert(user_id=message.chat.id, db_name='users', table_name='user')
-    user_activity_change.user_activity(active=0, session='')
+    user_insert = Insert(user_id=message.chat.id, db_name='users', table_name='user')
+    user_insert.user_activity(active=0, session='')
 
 @bot.callback_query_handler(func=lambda call: True)
 def bot_callback_query(call):
-    if call.data == "create_collection":
-        bot_new_collection(call.message)
+    if call.data == 'create_collection':
+        bot_new_collection(message=call.message)
+    elif call.data == 'back_to_list':
+        keyboard = show_collections(message=call.message)
+
+        bot.edit_message_text(text=texts.msg_collections(), 
+                            chat_id=call.message.chat.id,
+                            message_id=call.message.message_id, 
+                            reply_markup=keyboard)
+    else:
+        key = re.findall(r'\w-\d{6}-\d{4}-\w+', call.data)[0]
+
+        fetch_collection = Fetch(user_id=call.message.chat.id, db_name='collections', table_name='collection')
+        result = fetch_collection.search_collection(key=key)
+
+        if result:
+            if call.data == key:
+                collection_interface(message=call.message, collection=result)
+            elif call.data == f'delete_{key}':
+                delete_collection(message=call.message, collection=result)
+            elif call.data == f'yes_delete_{key}':
+                delete = Delete(user_id=call.message.chat.id, db_name='collections', table_name='collection')
+                delete.delete_collection(key=key)
+
+                bot.answer_callback_query(callback_query_id=call.id, 
+                                        text=f'Вы удалили коллекцию {result[2]}')
+                
+                bot.delete_message(chat_id=call.message.chat.id,
+                                message_id=call.message.message_id)
+
+                bot_collections(message=call.message)
+                
 
 def show_collections(message):
     '''Displays a list of user collections.
@@ -88,20 +118,19 @@ def register_collection_name(message):
     :param message: User message
     '''
 
-    if message.text == '/cancel':
-        bot_cancel(message)
+    if error_handler(message=message):
         return
 
-    user_activity_status_check = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
-    status = user_activity_status_check.user_activity_status()
+    user_fetch = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
+    status = user_fetch.user_activity_status()
 
     # The final insert of the collection in the database.
     final_insert = Insert(user_id=message.chat.id, db_name='collections', table_name='collection')
     date = f'{datetime.today().day}/{datetime.today().month}/{datetime.today().year}'
     final_insert.session_insert(name=message.text, key=status[0][2], creation_date=date)
 
-    user_activity_change = Insert(user_id=message.chat.id, db_name='users', table_name='user')
-    user_activity_change.user_activity(active=0, session='')
+    user_insert = Insert(user_id=message.chat.id, db_name='users', table_name='user')
+    user_insert.user_activity(active=0, session='')
 
     bot.send_message(chat_id=message.chat.id, text=texts.msg_new_collection_create())
     bot_collections(message=message)
@@ -113,10 +142,13 @@ def error_handler(message):
     :return: True/False the presence of an error
     '''
 
-    user_activity_status = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
-    status = user_activity_status.user_activity_status()
+    user_fetch = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
+    status = user_fetch.user_activity_status()
 
-    if status[0][1] == 1:
+    if message.text == '/cancel':
+        bot_cancel(message)
+        return True
+    elif status[0][1] == 1:
         # Called when a user attempts to create a new collection when a collection is already being created.
         error_message = texts.msg_err_collection_create() + texts.msg_err_solution_collection_create()
         bot.send_message(chat_id=message.chat.id, text=error_message)
@@ -124,4 +156,35 @@ def error_handler(message):
     
     return False
 
-bot.polling()
+def collection_interface(message, collection=None):
+    '''User collection information interface
+
+    :param collection: Collection information
+    '''
+
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    keyboard.add(*[types.InlineKeyboardButton(text='Продолжить изучение', callback_data=f'cards_{collection[1]}'),
+                types.InlineKeyboardButton(text='Добавить карточку', callback_data=f'new_card_{collection[1]}'),
+                types.InlineKeyboardButton(text='Изменить название', callback_data=f'edit_{collection[1]}'),
+                types.InlineKeyboardButton(text='Удалить коллекцию', callback_data=f'delete_{collection[1]}'),
+                types.InlineKeyboardButton(text='< Вернуться к списку коллекций', callback_data='back_to_list')])
+
+    text = texts.msg_collection_interface().format(collection[2], collection[3], collection[4])
+    bot.edit_message_text(text=text, chat_id=message.chat.id, 
+                        message_id=message.message_id, reply_markup=keyboard)
+
+def delete_collection(message, collection=None):
+    '''Delete user collection.
+
+    :param collection: Collection information
+    '''
+
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard.add(*[types.InlineKeyboardButton(text='Да, удалить!', callback_data=f'yes_delete_{collection[1]}'),
+                types.InlineKeyboardButton(text='Нет, это ошибка!', callback_data='back_to_list')])
+
+    bot.edit_message_text(text=texts.msg_delete_collection(), chat_id=message.chat.id,
+                        message_id=message.message_id, reply_markup=keyboard)
+
+if __name__ == '__main__':
+    bot.polling()

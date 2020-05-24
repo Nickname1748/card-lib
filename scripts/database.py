@@ -92,6 +92,16 @@ class Insert():
                         ' WHERE user_id=?', (session, self.user_id))
         connect.commit()
 
+
+class Delete():
+
+    def __init__(self, user_id='123456789',
+                db_name='db_name', table_name='table_name'):
+
+        self.user_id = user_id
+        self.db_name = db_name
+        self.table_name = table_name
+
     def delete_collection(self, key='k-123456-0987-z'):
         '''Deletes a session or collection from the database.
 
@@ -117,7 +127,7 @@ class Fetch():
     def search_collections(self):
         '''Search collections in the database.
 
-        :return: All collection information
+        :return: Information about all user collections
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -125,6 +135,26 @@ class Fetch():
         cursor.execute(f'SELECT * FROM {self.table_name}' \
                         ' WHERE user_id=?', (self.user_id,))
         fetch = cursor.fetchall()
+
+        if fetch:
+            connect.commit()
+            return fetch
+        else:
+            connect.commit()
+            return None
+    
+    def search_collection(self, key='k-123456-0987-z'):
+        '''Search for a specific user collection in the database.
+
+        :param key: Unique collection identifier
+        :return: All collection information
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'SELECT * FROM {self.table_name}' \
+                        ' WHERE (user_id=?) AND (key=?)', (self.user_id, key))
+        fetch = cursor.fetchone()
 
         if fetch:
             connect.commit()
@@ -146,4 +176,9 @@ class Fetch():
         fetch = cursor.fetchall()
         connect.commit()
 
-        return fetch
+        if fetch:
+            connect.commit()
+            return fetch
+        else:
+            connect.commit()
+            return None

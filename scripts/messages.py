@@ -34,8 +34,12 @@ class Texts():
 
     @staticmethod
     def msg_delete_collection():
-        return 'Удаление коллекции.'
+        return 'Вы уверены, что хотите удалить коллекцию?'
 
     @staticmethod
     def msg_cancel():
         return 'Операция прервана.'
+
+    @staticmethod
+    def msg_collection_interface():
+        return 'Название: {}\nКарточек: {}\nДата создания: {}'
