@@ -25,12 +25,28 @@ class Texts():
         return 'Вы создали новую коллекцию!'
 
     @staticmethod
+    def msg_collection_rename():
+        return 'Переименование коллекции. Введите новое название коллекции.'
+
+    @staticmethod
+    def msg_collection_renamed():
+        return 'Вы переименовали коллекцию!'
+
+    @staticmethod
     def msg_err_collection_create():
         return 'Ошибка создания новой коллекции!'
 
     @staticmethod
+    def msg_err_collection_rename():
+        return 'Ошибка переименования коллекции!'
+
+    @staticmethod
+    def msg_err_solution_collection_rename():
+        return 'Вы находитесь в процессе переименования коллекции. Завершите или отмените операцию.'
+
+    @staticmethod
     def msg_err_solution_collection_create():
-        return 'Вы уже находитесь в процессе создания коллекции. Завершите или отмените операцию.'
+        return 'Вы находитесь в процессе создания коллекции. Завершите или отмените операцию.'
 
     @staticmethod
     def msg_delete_collection():
