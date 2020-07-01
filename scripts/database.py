@@ -1,207 +1,202 @@
 import sqlite3
 
 
-class Create():
+class Create:
+    def users_db(self, db_name='users', db_table='user'):
+        '''Создание базы данных пользователей'''
+
+        connect = sqlite3.connect(f'{db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''CREATE TABLE {db_table}
+                        (user_id integer, menu_id integer,
+                        action integer, session text,
+                        username text, first_name text,
+                        last_name text, cards integer,
+                        collections integer)''')
+        connect.commit()
     
-    def create_users_db(self, db_name='users', table_name='user'):
+    def collections_db(self, db_name='collections', db_table='collection'):
+        '''Создание базы данных коллекций'''
+
         connect = sqlite3.connect(f'{db_name}.db')
         cursor = connect.cursor()
-        cursor.execute(f'CREATE TABLE {table_name}' \
-                        ' (user_id integer, active integer,' \
-                        ' session text)')
-        connect.commit()
+        cursor.execute(f'''CREATE TABLE {db_table}
+                        (user_id integer, key text,
+                        date text, name text,
+                        cards integer)''')
 
-    def create_collections_db(self, db_name='collections', table_name='collection'):
-        connect = sqlite3.connect(f'{db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'CREATE TABLE {table_name}' \
-                        ' (user_id integer, key integer,' \
-                        ' name text, cards_number integer,' \
-                        ' creation_date text)')
-        connect.commit()
-
-
-class Insert():
-
-    def __init__(self, user_id='123456789',
-                db_name='db_name', table_name='table_name'):
-
+class Insert:
+    def __init__(self, user_id=None, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
-        self.table_name = table_name
+        self.db_table = db_table
 
-    def db_new_user(self):
-        '''Insert a new user to the database.
-        '''
+    def new_user(self, menu_id=0, action=0,
+                session=None, username=None, first_name=None,
+                last_name=None, cards=0, collections=0):
+        '''Запись нового пользователя в базу данных'''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
-        cursor.execute(f'SELECT user_id FROM {self.table_name}' \
-                        ' WHERE user_id=?', (self.user_id,))
+        cursor.execute(f'''SELECT user_id FROM {self.db_table} 
+                        WHERE user_id=?''', (self.user_id,))
         fetch = cursor.fetchall()
 
         if not fetch:
-            cursor.execute(f'INSERT INTO {self.table_name}' \
-                            ' VALUES (?,?,?)', (self.user_id, 0, ''))
-        connect.commit()
-
-    def db_session_reservation(self, key='k-123456-0987-z'):
-        '''Create a new collection.
-
-        :param key: Unique collection identifier
-        '''
-
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'INSERT INTO {self.table_name}' \
-                        ' VALUES (?,?,?,?,?)',
-                        (self.user_id, key, '', 0, ''))
-        connect.commit()
-
-    def db_session_insert(self, name='collection_n',
-                    key='k-123456-0987-z', creation_date='DD/MM/YY'):
-        '''Insert collection to the database.
-
-        :param name: Collection Name
-        :param key: Unique collection identifier
-        :param creation_date: Collection creation date
-        '''
-
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'UPDATE {self.table_name} SET name=?' \
-                        ' WHERE (user_id=?) AND (key=?)',
-                        (name, self.user_id, key))
-        cursor.execute(f'UPDATE {self.table_name} SET creation_date=?' \
-                        ' WHERE (user_id=?) AND (key=?)',
-                        (creation_date, self.user_id, key))
-        connect.commit()
-
-
-class Delete():
-
-    def __init__(self, user_id='123456789',
-                db_name='db_name', table_name='table_name'):
-
-        self.user_id = user_id
-        self.db_name = db_name
-        self.table_name = table_name
-
-    def db_delete_collection(self, key='k-123456-0987-z'):
-        '''Deletes a session or collection from the database.
-
-        :param session: Active session
-        :param key: Unique collection identifier
-        '''
-
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'DELETE FROM {self.table_name}' \
-                        ' WHERE (user_id=?) AND (key=?)', (self.user_id, key))
-        connect.commit()
-
-
-class Fetch():
-
-    def __init__(self, user_id='123456789',
-                db_name='db_name', table_name='table_name'):
-
-        self.user_id = user_id
-        self.db_name = db_name
-        self.table_name = table_name
-
-    def db_search_collections(self):
-        '''Search collections in the database.
-
-        :return: Information about all user collections
-        '''
-
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'SELECT * FROM {self.table_name}' \
-                        ' WHERE user_id=?', (self.user_id,))
-        fetch = cursor.fetchall()
-
-        if fetch:
-            connect.commit()
-            return fetch
-        else:
-            connect.commit()
-            return None
-    
-    def db_search_collection(self, key='k-123456-0987-z'):
-        '''Search for a specific user collection in the database.
-
-        :param key: Unique collection identifier
-        :return: All collection information
-        '''
-
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'SELECT * FROM {self.table_name}' \
-                        ' WHERE (user_id=?) AND (key=?)', (self.user_id, key))
-        fetch = cursor.fetchone()
-
-        if fetch:
-            connect.commit()
-            return fetch
-        else:
-            connect.commit()
-            return None
-
-    def db_user_activity_status(self):
-        '''Search for user information in the database.
-
-        :return: All user status information
-        '''
-
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'SELECT * FROM {self.table_name}' \
-                        ' WHERE user_id=?', (self.user_id,))
-        fetch = cursor.fetchall()
-        connect.commit()
-
-        if fetch:
-            connect.commit()
-            return fetch
-        else:
-            connect.commit()
-            return None
-
-
-class Update():
-
-    def __init__(self, user_id='123456789',
-                db_name='db_name', table_name='table_name'):
-
-        self.user_id = user_id
-        self.db_name = db_name
-        self.table_name = table_name
-
-    def db_user_activity(self, active=0, session='k-123456-0987-z'):
-        '''Tracking user activity in the bot.
-
-        :param active: User activity (0/1 - Inactive/Active)
-        :param session: Active session
-        '''
-
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'UPDATE {self.table_name} SET active=?' \
-                        ' WHERE user_id=?', (active, self.user_id))
-        cursor.execute(f'UPDATE {self.table_name} SET session=?' \
-                        ' WHERE user_id=?', (session, self.user_id))
-        connect.commit()
-    
-    def db_rename_collection(self, name='collection_n', key='k-123456-0987-z'):
-        '''Updating the collection name in the database.
-
-        :param key: Unique collection identifier
-        '''
+            cursor.execute(f'''INSERT INTO {self.db_table} 
+                            VALUES (?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
+                                                        action, session,
+                                                        username, first_name,
+                                                        last_name, cards,
+                                                        collections))
         
+        connect.commit()
+    
+    def create_collection(self, key='', date=None,
+                        name=None, cards=0):
+        '''Запись новой коллекции пользователя в базу данных'''
+
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
-        cursor.execute(f'UPDATE {self.table_name} SET name=?' \
-                        ' WHERE (user_id=?) AND (key=?)', (name, self.user_id, key))
+        cursor.execute(f'''INSERT INTO {self.db_table} 
+                        VALUES (?,?,?,?,?)''', (self.user_id, key,
+                                                date, name,
+                                                cards))
+        
         connect.commit()
+
+
+class Fetch:
+    def __init__(self, user_id, db_name='users', db_table='user'):
+        self.user_id = user_id
+        self.db_name = db_name
+        self.db_table = db_table
+
+    def user_attribute(self, attribute=''):
+        '''
+        Получение какой-либо переменной пользователя из базы данных
+        
+        :param attribute:
+        :return: Значение переменной
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT {attribute} FROM {self.db_table} 
+                        WHERE user_id=?''', (self.user_id,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch[0][0]
+        else:
+            return None
+
+    def collection_attribute(self, attribute='', key=''):
+        '''
+        Получение какой-либо переменной коллекции пользователя
+        из базы данных
+        
+        :param attribute:
+        :param key: Уникальный ключ коллекции
+        :return: Значение переменной
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT {attribute} FROM {self.db_table} 
+                        WHERE (user_id=?) AND (key=?)''', (self.user_id, key))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch[0][0]
+        else:
+            return None
+
+    def user_collections(self):
+        '''
+        Получение всех коллекций пользователя
+
+        :return:
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT * FROM {self.db_table} 
+                        WHERE user_id=?''', (self.user_id,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch
+        else:
+            return None
+
+
+class Update:
+    def __init__(self, user_id, db_name='users', db_table='user'):
+        self.user_id = user_id
+        self.db_name = db_name
+        self.db_table = db_table
+
+    def user_attribute(self, attribute='', value=0):
+        '''
+        Обновление значения какой-либо переменной пользователя
+        в базе данных
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''UPDATE {self.db_table} SET {attribute}=?
+                        WHERE user_id=?''', (value, self.user_id))
+        connect.commit()
+
+    def collection_attribute(self, key='',
+                            attribute='', value=0):
+        '''
+        Обновление значения какой-либо переменной коллекции
+        в базе данных
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''UPDATE {self.db_table} SET {attribute}=?
+                        WHERE (user_id=?) AND (key=?)''', (value, 
+                                                        self.user_id,
+                                                        key))
+        connect.commit()
+
+    def change_user_attribute(self, attribute='', value=0):
+        '''Изменение переменной с учетом её предыдущего значения'''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''UPDATE {self.db_table}
+                        SET {attribute} = {attribute} + {value}
+                        WHERE user_id=?''', (self.user_id,))
+        connect.commit()
+
+class Delete:
+    def __init__(self, user_id, db_name='users', db_table='user'):
+        self.user_id = user_id
+        self.db_name = db_name
+        self.db_table = db_table
+
+    def delete_collection(self, key=''):
+        '''
+        Удаление коллекции пользователя
+        
+        :param key: Уникальный ключ коллекции
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''DELETE FROM {self.db_table}
+                        WHERE (user_id=?) AND (key=?)''', (self.user_id, key))
+        connect.commit()
+
+
+#create = Create()
+#create.users_db()
+#create.collections_db()
