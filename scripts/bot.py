@@ -1,232 +1,250 @@
 import telebot
 from telebot import types
 
-from config import token
-from messages import Texts as texts
-from database import Insert, Delete, Fetch, Update
-
-import random
-from datetime import datetime
 import re
+import random
 
-bot = telebot.TeleBot(token=token)
+from datetime import datetime
+
+from texts import Messages
+from config import Tokens
+from database import Insert, Fetch, Update, Delete
+
+bot = telebot.TeleBot(Tokens.TOKEN)
 
 @bot.message_handler(commands=['start'])
 def bot_start(message):
-    insert_new_user = Insert(user_id=message.chat.id, db_name='users', table_name='user')
-    insert_new_user.db_new_user()
+    '''Начало работы с ботом'''
 
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_start())
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_instruction())
+    insert_user = Insert(message.chat.id)
+    insert_user.new_user(username=message.from_user.username,
+                        first_name=message.from_user.first_name,
+                        last_name=message.from_user.last_name)
 
-@bot.message_handler(commands=['help'])
-def bot_help(message):
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_help())
+    bot.send_message(message.chat.id, Messages.ASSISTANCE['START'])
+    bot_private_office(message)
 
-@bot.message_handler(commands=['my_collections'])
-def bot_collections(message):
-    keyboard = show_collections(message=message)
+@bot.message_handler(commands=['office'])
+def bot_private_office(message):
+    '''Личный кабинет пользователя'''
 
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_collections(), reply_markup=keyboard)
+    private_office_menu = keyboard_maker(3, **Messages.PRIVATE_OFFICE_BUTTONS)
+    menu_message = bot.send_message(chat_id=message.chat.id,
+                            text=Messages.PRIVATE_OFFICE['INTERFACE'],
+                            reply_markup=private_office_menu)
 
-@bot.message_handler(commands=['new_collection'])
-def bot_new_collection(message):
-    if error_handler(message=message):
-        return
-
-    # Creating a collection and generating a unique key.
-    insert_new_collection = Insert(user_id=message.chat.id, db_name='collections', table_name='collection')
-    new_key = f'k-{random.randint(100000, 1000000)}-{random.randint(1000, 10000)}-z'
-    insert_new_collection.db_session_reservation(key=new_key)
-
-    user_update = Update(user_id=message.chat.id, db_name='users', table_name='user')
-    user_update.db_user_activity(active=1, session=new_key)
-
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_new_collection())
-    bot.register_next_step_handler(message=message, callback=register_collection_name)
+    update_menu_id = Update(message.chat.id)
+    update_menu_id.user_attribute('menu_id', menu_message.message_id)
 
 @bot.message_handler(commands=['cancel'])
 def bot_cancel(message):
-    user_fetch = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
-    session = user_fetch.db_user_activity_status()[0][2]
+    '''Отмена текущей операции'''
 
-    if session == 1:
-        delete_session = Delete(user_id=message.chat.id, db_name='collections', table_name='collection')
-        delete_session.db_delete_collection(key=session)
+    user_status = Fetch(message.chat.id)
+    status = user_status.user_attribute('action')
+    session = user_status.user_attribute('session')
 
-    user_update = Update(user_id=message.chat.id, db_name='users', table_name='user')
-    user_update.db_user_activity(active=0, session='')
+    if status == 1:
+        delete_session = Delete(message.chat.id, 'collections', 'collection')
+        delete_session.delete_collection(session)
 
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_cancel())
-    bot_collections(message=message)
+    update_user_status = Update(message.chat.id)
+    update_user_status.user_attribute('action', 0)
+    update_user_status.user_attribute('session', None)
+
+    bot.send_message(message.chat.id, Messages.ASSISTANCE['CANCEL'])
+    bot_private_office(message)
 
 @bot.callback_query_handler(func=lambda call: True)
 def bot_callback_query(call):
-    if call.data == 'create_collection':
-        bot_new_collection(message=call.message)
+    if error_handler(call.message):
+        return
 
-    elif call.data == 'back_to_list':
-        keyboard = show_collections(message=call.message)
+    elif call.data == 'profile':
+        call_profile_menu(call)
 
-        bot.edit_message_text(text=texts.msg_collections(), 
-                            chat_id=call.message.chat.id,
-                            message_id=call.message.message_id, 
-                            reply_markup=keyboard)
+    elif 'collection' in call.data:
+        if 'create' in call.data:
+            call_create_collection(call)
+        else:
+            call_collections_menu(call)
 
-    else:
-        key = re.findall(r'\w-\d{6}-\d{4}-\w+', call.data)[0]
+    elif 'show' in call.data:
+        call_collection_menu(call)
 
-        fetch_collection = Fetch(user_id=call.message.chat.id, db_name='collections', table_name='collection')
-        result = fetch_collection.db_search_collection(key=key)
+    elif call.data == 'home':
+        call_home(call)
 
-        if result:
-            if call.data == key:
-                collection_interface(message=call.message, collection=result)
 
-            elif call.data == f'rename_{key}':
-                if error_handler(message=call.message):
-                    return
+def call_profile_menu(call):
+    '''Профиль пользователя'''
 
-                user_update = Update(user_id=call.message.chat.id, db_name='users', table_name='user')
-                user_update.db_user_activity(active=2, session=key)
+    user_info = Fetch(call.message.chat.id)
+    user_username = user_info.user_attribute('username')
+    collections = user_info.user_attribute('collections')
+    cards = user_info.user_attribute('cards')
+    
+    profile_menu = keyboard_maker(1, **Messages.PROFILE_BUTTONS)
+    main_text = Messages.PROFILE['INTERFACE'].format(user_username,
+                                                    collections,
+                                                    cards)
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=main_text,
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=profile_menu)
 
-                bot.send_message(chat_id=call.message.chat.id, text=texts.msg_collection_rename())
-                bot.register_next_step_handler(message=call.message, callback=rename_collection)
 
-            elif call.data == f'delete_{key}':
-                delete_collection(message=call.message, collection=result)
+def call_collections_menu(call):
+    '''Коллекции пользователя'''
 
-            elif call.data == f'yes_delete_{key}':
-                delete = Delete(user_id=call.message.chat.id, db_name='collections', table_name='collection')
-                delete.db_delete_collection(key=key)
+    fetch_collections = Fetch(user_id=call.message.chat.id,
+                            db_name='collections',
+                            db_table='collection')
+    collections_info = fetch_collections.user_collections()
 
-                bot.answer_callback_query(callback_query_id=call.id, 
-                                        text=f'Вы удалили коллекцию {result[2]}')
-                
-                bot.delete_message(chat_id=call.message.chat.id,
-                                message_id=call.message.message_id)
+    buttons = {}
+    collections_keyboard = None
+    if collections_info:
+        for collection in collections_info:
+            buttons[collection[3]] = f'show_{collection[1]}'
+        collections_keyboard = keyboard_maker(2, **buttons)
 
-                bot_collections(message=call.message)
-                
+    collections_menu = keyboard_maker(row_width=2,
+                                    keyboard=collections_keyboard,
+                                    **Messages.COLLECTIONS_BUTTONS)
 
-def show_collections(message):
-    '''Displays a list of user collections.
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=Messages.COLLECTIONS['INTERFACE'],
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=collections_menu)
 
-    :param message: User message
-    :return: Inline buttons with existing user collections
-    '''
+def call_create_collection(call):
+    '''Создание коллекции'''
 
-    fetch_collections = Fetch(user_id=message.chat.id, db_name='collections', table_name='collection')
-    result = fetch_collections.db_search_collections()
+    if error_handler(call.message) or cancel_handler(call.message):
+        return
+    
+    key = f'k-{random.randint(1, 1000000)}-{random.randint(1, 1000)}-n'
+    date = datetime.now()
 
-    keyboard = types.InlineKeyboardMarkup(row_width=2)
-    if result:
-        keyboard.add(*[types.InlineKeyboardButton(text=collection[2], callback_data=collection[1]) for collection in result])
-    keyboard.add(types.InlineKeyboardButton(text='Новая коллекция', callback_data='create_collection'))
+    update_user_status = Update(call.message.chat.id)
+    update_user_status.user_attribute('action', 1)
+    update_user_status.user_attribute('session', key)
 
+    insert_collection = Insert(user_id=call.message.chat.id,
+                            db_name='collections',
+                            db_table='collection')
+    insert_collection.create_collection(key, date)
+
+    answer_text = Messages.COLLECTIONS['CREATE_COLLECTION']
+    bot.answer_callback_query(call.id, answer_text, True)
+    bot.send_message(call.message.chat.id, answer_text)
+    bot.register_next_step_handler(call.message, collection_name)
+
+def collection_name(message):
+    '''Получение названия коллекции'''
+
+    if cancel_handler(message):
+        return
+
+    user_status = Fetch(message.chat.id)
+    key = user_status.user_attribute('session')
+    
+    insert_name = Update(message.chat.id, 'collections', 'collection')
+    insert_name.collection_attribute(key, 'name', message.text)
+
+    update_user_status = Update(message.chat.id)
+    update_user_status.user_attribute('action', 0)
+    update_user_status.user_attribute('session', None)
+    update_user_status.change_user_attribute('collections', 1)
+
+    # TO DO: Проверка на отличающиеся названия
+    answer_text = Messages.COLLECTIONS['COLLECTION_CREATED']
+    bot.send_message(message.chat.id, answer_text.format(message.text))
+    bot_private_office(message)
+
+
+def call_collection_menu(call):
+    '''Главное меню коллекции'''
+
+    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    
+    collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
+    collection_name = collection_info.collection_attribute('name', key)
+    collection_cards = collection_info.collection_attribute('cards', key)
+    collection_date = collection_info.collection_attribute('date', key)
+
+    buttons = {}
+    for collection in Messages.COLLECTION_BUTTONS:
+        buttons[collection] = Messages.COLLECTION_BUTTONS[collection].format(key)
+
+    collection_menu = keyboard_maker(2, **buttons)
+    main_text = Messages.COLLECTION_MENU['INTERFACE'].format(collection_name,
+                                                        collection_cards,
+                                                        collection_date[:16])
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=main_text,
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=collection_menu)
+
+
+def call_home(call):
+    '''Возвращение в личный кабинет пользователя'''
+
+    private_office_menu = keyboard_maker(3, **Messages.PRIVATE_OFFICE_BUTTONS)
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=Messages.PRIVATE_OFFICE['INTERFACE'],
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=private_office_menu)
+
+
+def keyboard_maker(row_width=3, keyboard=None, **buttons):
+    '''Создание клавиатур меню'''
+
+    if not keyboard:
+        keyboard = types.InlineKeyboardMarkup(row_width)
+
+    keyboard_buttons = [types.InlineKeyboardButton(text=text,
+        callback_data=data) for text, data in buttons.items()]
+
+    keyboard.add(*keyboard_buttons)
     return keyboard
 
-def register_collection_name(message):
-    '''Creating a session to insert a collection to the database.
-
-    :param message: User message
-    '''
-
-    if message.text == '/cancel':
-        bot_cancel(message)
-        return
-
-    user_fetch = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
-    status = user_fetch.db_user_activity_status()[0][2]
-
-    # The final insert of the collection in the database.
-    final_insert = Insert(user_id=message.chat.id, db_name='collections', table_name='collection')
-    date = f'{datetime.today().day}/{datetime.today().month}/{datetime.today().year}'
-    final_insert.db_session_insert(name=message.text, key=status, creation_date=date)
-
-    user_update = Update(user_id=message.chat.id, db_name='users', table_name='user')
-    user_update.db_user_activity(active=0, session='')
-
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_new_collection_create())
-    bot_collections(message=message)
-
 def error_handler(message):
-    '''Handling errors that may occur during an unexpected user action scenario.
+    '''Проверка на наличие ошибки'''
 
-    :param message: User message
-    :return: True/False the presence of an error
-    '''
+    user_status = Fetch(message.chat.id)
+    status = user_status.user_attribute('action')
+    menu_id = user_status.user_attribute('menu_id')
 
-    user_fetch = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
-    status = user_fetch.db_user_activity_status()
-
-    if message.text == '/cancel':
-        bot_cancel(message)
+    if status == 1:
+        bot.send_message(message.chat.id, Messages.ERRORS[1])
         return True
 
-    elif status[0][1] == 1:
-        # Called when a user attempts to create a new collection when a collection is already being created.
-        error_message = texts.msg_err_collection_create() + texts.msg_err_solution_collection_create()
-        bot.send_message(chat_id=message.chat.id, text=error_message)
+    elif status == 2:
+        bot.send_message(message.chat.id, Messages.ERRORS[2])
         return True
-    
-    elif status[0][1] == 2:
-        # Called when a user attempts to perform an action while renaming a collection.
-        error_message = texts.msg_err_collection_rename() + texts.msg_err_solution_collection_rename()
-        bot.send_message(chat_id=message.chat.id, text=error_message)
+
+    elif message.message_id != menu_id and status != 1:
+        bot.edit_message_text(text=Messages.ASSISTANCE['OLD_SESSION'],
+                            chat_id=message.chat.id,
+                            message_id=message.message_id)
         return True
-    
+
     return False
 
-def collection_interface(message, collection=None):
-    '''User collection information interface.
+def cancel_handler(message):
+    '''Проверка на отмену операции'''
 
-    :param collection: Collection information
-    '''
-
-    keyboard = types.InlineKeyboardMarkup(row_width=2)
-    keyboard.add(*[types.InlineKeyboardButton(text='Продолжить изучение', callback_data=f'cards_{collection[1]}'),
-                types.InlineKeyboardButton(text='Добавить карточку', callback_data=f'new_card_{collection[1]}'),
-                types.InlineKeyboardButton(text='Изменить название', callback_data=f'rename_{collection[1]}'),
-                types.InlineKeyboardButton(text='Удалить коллекцию', callback_data=f'delete_{collection[1]}'),
-                types.InlineKeyboardButton(text='< Вернуться к списку коллекций', callback_data='back_to_list')])
-
-    text = texts.msg_collection_interface().format(collection[2], collection[3], collection[4])
-    bot.edit_message_text(text=text, chat_id=message.chat.id, 
-                        message_id=message.message_id, reply_markup=keyboard)
-
-def delete_collection(message, collection=None):
-    '''Delete user collection.
-
-    :param collection: Collection information
-    '''
-
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(*[types.InlineKeyboardButton(text='Да, удалить!', callback_data=f'yes_delete_{collection[1]}'),
-                types.InlineKeyboardButton(text='Нет, это ошибка!', callback_data='back_to_list')])
-
-    bot.edit_message_text(text=texts.msg_delete_collection(), chat_id=message.chat.id,
-                        message_id=message.message_id, reply_markup=keyboard)
-
-def rename_collection(message):
-    '''Rename user collection.
-    '''
-
-    if message.text == '/cancel':
+    if message.text == '/cancel' or message.text.lower() == 'отмена':
         bot_cancel(message)
-        return
+        return True
 
-    user_fetch = Fetch(user_id=message.chat.id, db_name='users', table_name='user')
-    status = user_fetch.db_user_activity_status()[0][2]
-
-    user_rename_collection = Update(user_id=message.chat.id, db_name='collections', table_name='collection')
-    user_rename_collection.db_rename_collection(name=message.text, key=status)
-    
-    user_update = Update(user_id=message.chat.id, db_name='users', table_name='user')
-    user_update.db_user_activity(active=0, session='')
-
-    bot.send_message(chat_id=message.chat.id, text=texts.msg_collection_renamed())
-    bot_collections(message=message)
+    return False
 
 if __name__ == '__main__':
     bot.polling()
