@@ -92,7 +92,7 @@ class Fetch:
         else:
             return None
 
-    def collection_attribute(self, attribute='', key=''):
+    def collection_attribute(self, key='', attribute=''):
         '''
         Получение какой-либо переменной коллекции пользователя
         из базы данных
