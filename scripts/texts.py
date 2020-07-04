@@ -23,7 +23,7 @@ class Messages:
     }
 
     PROFILE_BUTTONS = {
-        '<  Назад' : 'home'
+        '‹ Назад' : 'home'
     }
 
 
@@ -34,8 +34,8 @@ class Messages:
     }
 
     COLLECTIONS_BUTTONS = {
-        'Новая коллекция' : 'create_collection',
-        '<  Назад' : 'home'
+        '+ Новая коллекция' : 'create_collection',
+        '‹ Назад' : 'home'
     }
 
     COLLECTION_MENU = {
@@ -43,12 +43,23 @@ class Messages:
     }
 
     COLLECTION_BUTTONS = {
-        'Продолжить изучение' : 'cards_{}',
-        'Добавить карточку' : 'new_card_{}',
-        'Изменить название' : 'rename_{}',
-        'Удалить коллекцию' : 'delete_{}',
-        'Личный кабинет' : 'home',
-        '<  Назад' : 'collections'
+        '~ Продолжить изучение' : 'collection_cards_{}',
+        '+ Добавить карточку' : 'collection_new_card_{}',
+        '* Изменить название' : 'collection_rename_{}',
+        '– Удалить коллекцию' : 'collection_delete_{}',
+        '« Личный кабинет' : 'home',
+        '‹ Назад' : 'collections'
+    }
+
+    DELETE_COLLECTION = {
+        'DELETE' : 'Вы точно хотите удалить коллекцию?',
+        'DELETE_SUCCESSFUL' : 'Вы успешно удалили коллекцию «{}».',
+        'DELETE_CANCELED' : 'Удаление отменено.'
+    }
+
+    DELETE_COLLECTION_BUTTONS = {
+        '✓ Да, удалить эту коллекцию.' : 'collection_delete_yes_{}',
+        '× Нет, это ошибка!' : 'collection_delete_no_{}'
     }
 
 
