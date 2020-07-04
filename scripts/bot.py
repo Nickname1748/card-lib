@@ -64,13 +64,25 @@ def bot_callback_query(call):
         call_profile_menu(call)
 
     elif 'collection' in call.data:
-        if 'create' in call.data:
+        if 'show' in call.data:
+            call_collection_menu(call)
+        elif 'create' in call.data:
             call_create_collection(call)
+        elif 'cards' in call.data:
+            pass
+        elif 'new_card' in call.data:
+            pass
+        elif 'rename' in call.data:
+            pass
+        elif 'delete' in call.data:
+            if 'yes' in call.data:
+                call_delete_collection_yes(call)
+            elif 'no' in call.data:
+                call_delete_collection_no(call)
+            else:
+                call_delete_collection_menu(call)
         else:
             call_collections_menu(call)
-
-    elif 'show' in call.data:
-        call_collection_menu(call)
 
     elif call.data == 'home':
         call_home(call)
@@ -107,7 +119,7 @@ def call_collections_menu(call):
     collections_keyboard = None
     if collections_info:
         for collection in collections_info:
-            buttons[collection[3]] = f'show_{collection[1]}'
+            buttons[collection[3]] = f'collection_show_{collection[1]}'
         collections_keyboard = keyboard_maker(2, **buttons)
 
     collections_menu = keyboard_maker(row_width=2,
@@ -172,14 +184,11 @@ def call_collection_menu(call):
     key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
     
     collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
-    collection_name = collection_info.collection_attribute('name', key)
-    collection_cards = collection_info.collection_attribute('cards', key)
-    collection_date = collection_info.collection_attribute('date', key)
+    collection_name = collection_info.collection_attribute(key, 'name')
+    collection_cards = collection_info.collection_attribute(key, 'cards')
+    collection_date = collection_info.collection_attribute(key, 'date')
 
-    buttons = {}
-    for collection in Messages.COLLECTION_BUTTONS:
-        buttons[collection] = Messages.COLLECTION_BUTTONS[collection].format(key)
-
+    buttons = keyboard_format(Messages.COLLECTION_BUTTONS, key)
     collection_menu = keyboard_maker(2, **buttons)
     main_text = Messages.COLLECTION_MENU['INTERFACE'].format(collection_name,
                                                         collection_cards,
@@ -189,6 +198,48 @@ def call_collection_menu(call):
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
                         reply_markup=collection_menu)
+
+def call_delete_collection_menu(call):
+    '''Меню удаления коллекции'''
+
+    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    buttons = keyboard_format(Messages.DELETE_COLLECTION_BUTTONS, key)
+    delete_collection = keyboard_maker(1, **buttons)
+
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=Messages.DELETE_COLLECTION['DELETE'],
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=delete_collection)
+
+def call_delete_collection_yes(call):
+    '''Согласие на удаление коллекции'''
+
+    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    fetch_collection_name = Fetch(user_id=call.message.chat.id,
+                                db_name='collections',
+                                db_table='collection')
+    collection_name = fetch_collection_name.collection_attribute(key, 'name')
+
+    update_user_status = Update(call.message.chat.id)
+    update_user_status.change_user_attribute('collections', -1)
+
+    delete_collection = Delete(user_id=call.message.chat.id,
+                            db_name='collections',
+                            db_table='collection')
+    delete_collection.delete_collection(key)
+
+    successful_delete_text = Messages.DELETE_COLLECTION[
+                                'DELETE_SUCCESSFUL'].format(collection_name)
+    bot.answer_callback_query(call.id, successful_delete_text, True)
+    call_collections_menu(call)
+
+def call_delete_collection_no(call):
+    '''Отмена удаления коллекции'''
+
+    canceled_delete_text = Messages.DELETE_COLLECTION['DELETE_CANCELED']
+    bot.answer_callback_query(call.id, canceled_delete_text, True)
+    call_collection_menu(call)
 
 
 def call_home(call):
@@ -203,7 +254,11 @@ def call_home(call):
 
 
 def keyboard_maker(row_width=3, keyboard=None, **buttons):
-    '''Создание клавиатур меню'''
+    '''
+    Создание клавиатур меню
+    
+    :return: Клавиатура
+    '''
 
     if not keyboard:
         keyboard = types.InlineKeyboardMarkup(row_width)
@@ -214,8 +269,21 @@ def keyboard_maker(row_width=3, keyboard=None, **buttons):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
+def keyboard_format(buttons=None, format_object=None):
+    '''
+    Создание клавиатур с вставляемыми элементами
+    
+    :return: Клавиатура
+    '''
+
+    keyboard = {}
+    for button in buttons:
+        keyboard[button] = buttons[button].format(format_object)
+
+    return keyboard
+
 def error_handler(message):
-    '''Проверка на наличие ошибки'''
+    '''Проверка на наличие ошибок'''
 
     user_status = Fetch(message.chat.id)
     status = user_status.user_attribute('action')
