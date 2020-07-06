@@ -25,6 +25,7 @@ class Create:
                         date text, name text,
                         cards integer)''')
 
+
 class Insert:
     def __init__(self, user_id=None, db_name='users', db_table='user'):
         self.user_id = user_id
@@ -44,10 +45,14 @@ class Insert:
 
         if not fetch:
             cursor.execute(f'''INSERT INTO {self.db_table} 
-                            VALUES (?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
-                                                        action, session,
-                                                        username, first_name,
-                                                        last_name, cards,
+                            VALUES (?,?,?,?,?,?,?,?,?)''', (self.user_id,
+                                                        menu_id,
+                                                        action,
+                                                        session,
+                                                        username,
+                                                        first_name,
+                                                        last_name,
+                                                        cards,
                                                         collections))
         
         connect.commit()
@@ -67,7 +72,7 @@ class Insert:
 
 
 class Fetch:
-    def __init__(self, user_id, db_name='users', db_table='user'):
+    def __init__(self, user_id=None, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
         self.db_table = db_table
@@ -97,8 +102,8 @@ class Fetch:
         Получение какой-либо переменной коллекции пользователя
         из базы данных
         
-        :param attribute:
         :param key: Уникальный ключ коллекции
+        :param attribute:
         :return: Значение переменной
         '''
 
@@ -133,9 +138,29 @@ class Fetch:
         else:
             return None
 
+    def copy_check(self, attribute='', value=0):
+        '''
+        Проверка на наличие схожих значений определенных переменных
+        в базе данных
+        
+        :return: True/False
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT user_id FROM {self.db_table} 
+                        WHERE (user_id=?)
+                        AND ({attribute}=?)''', (self.user_id, value))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return True
+        else:
+            return False
 
 class Update:
-    def __init__(self, user_id, db_name='users', db_table='user'):
+    def __init__(self, user_id=None, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
         self.db_table = db_table
@@ -177,8 +202,9 @@ class Update:
                         WHERE user_id=?''', (self.user_id,))
         connect.commit()
 
+
 class Delete:
-    def __init__(self, user_id, db_name='users', db_table='user'):
+    def __init__(self, user_id=None, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
         self.db_table = db_table
