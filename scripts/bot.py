@@ -66,23 +66,32 @@ def bot_callback_query(call):
     elif 'collection' in call.data:
         if 'show' in call.data:
             call_collection_menu(call)
+
         elif 'create' in call.data:
             call_create_collection(call)
-        elif 'cards' in call.data:
+
+        elif 'continue' in call.data:
             pass
-        elif 'new_card' in call.data:
-            pass
+
         elif 'rename' in call.data:
-            pass
+            call_rename_collection(call)
+
         elif 'delete' in call.data:
             if 'yes' in call.data:
                 call_delete_collection_yes(call)
+
             elif 'no' in call.data:
                 call_delete_collection_no(call)
+
             else:
                 call_delete_collection_menu(call)
+
         else:
             call_collections_menu(call)
+
+    elif 'card' in call.data:
+        if 'show' in call.data:
+            pass
 
     elif call.data == 'home':
         call_home(call)
@@ -160,6 +169,14 @@ def collection_name(message):
 
     if cancel_handler(message):
         return
+    
+    duplicate_name = Fetch(message.chat.id, 'collections', 'collection')
+    result = duplicate_name.copy_check('name', message.text)
+    
+    if result:
+        bot.send_message(message.chat.id, Messages.ERRORS[4])
+        bot.register_next_step_handler(message, collection_name)
+        return
 
     user_status = Fetch(message.chat.id)
     key = user_status.user_attribute('session')
@@ -172,7 +189,6 @@ def collection_name(message):
     update_user_status.user_attribute('session', None)
     update_user_status.change_user_attribute('collections', 1)
 
-    # TO DO: Проверка на отличающиеся названия
     answer_text = Messages.COLLECTIONS['COLLECTION_CREATED']
     bot.send_message(message.chat.id, answer_text.format(message.text))
     bot_private_office(message)
@@ -198,6 +214,51 @@ def call_collection_menu(call):
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
                         reply_markup=collection_menu)
+
+def call_rename_collection(call):
+    '''Переименование коллекции'''
+
+    if error_handler(call.message) or cancel_handler(call.message):
+        return
+    
+    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    update_user_status = Update(call.message.chat.id)
+    update_user_status.user_attribute('action', 2)
+    update_user_status.user_attribute('session', key)
+
+    answer_text = Messages.COLLECTIONS['RENAME_COLLECTION']
+    bot.answer_callback_query(call.id, answer_text, True)
+    bot.send_message(call.message.chat.id, answer_text)
+    bot.register_next_step_handler(call.message, rename_collection)
+
+def rename_collection(message):
+    '''Получение нового названия коллекции'''
+
+    if cancel_handler(message):
+        return
+    
+    duplicate_name = Fetch(message.chat.id, 'collections', 'collection')
+    result = duplicate_name.copy_check('name', message.text)
+    
+    if result:
+        bot.send_message(message.chat.id, Messages.ERRORS[4])
+        bot.register_next_step_handler(message, collection_name)
+        return
+
+    user_status = Fetch(message.chat.id)
+    key = user_status.user_attribute('session')
+    old_name = duplicate_name.collection_attribute(key, 'name')
+
+    insert_name = Update(message.chat.id, 'collections', 'collection')
+    insert_name.collection_attribute(key, 'name', message.text)
+
+    update_user_status = Update(message.chat.id)
+    update_user_status.user_attribute('action', 0)
+    update_user_status.user_attribute('session', None)
+
+    answer = Messages.COLLECTIONS['COLLECTION_RENAMED']
+    bot.send_message(message.chat.id, answer.format(old_name, message.text))
+    bot_private_office(message)
 
 def call_delete_collection_menu(call):
     '''Меню удаления коллекции'''
@@ -298,7 +359,7 @@ def error_handler(message):
         return True
 
     elif message.message_id != menu_id and status != 1:
-        bot.edit_message_text(text=Messages.ASSISTANCE['OLD_SESSION'],
+        bot.edit_message_text(text=Messages.ERRORS[3],
                             chat_id=message.chat.id,
                             message_id=message.message_id)
         return True
