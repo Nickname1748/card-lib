@@ -47,6 +47,9 @@ def bot_cancel(message):
     if status == 1:
         delete_session = Delete(message.chat.id, 'collections', 'collection')
         delete_session.delete_collection(session)
+    elif status == 3:
+        delete_session = Delete(message.chat.id, 'collections', 'card')
+        delete_session.delete_card(session)
 
     update_user_status = Update(message.chat.id)
     update_user_status.user_attribute('action', 0)
@@ -57,6 +60,7 @@ def bot_cancel(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def bot_callback_query(call):
+    print(call.data)
     if error_handler(call.message):
         return
 
@@ -91,7 +95,26 @@ def bot_callback_query(call):
 
     elif 'card' in call.data:
         if 'show' in call.data:
-            pass
+            call_card_menu(call)
+
+        elif 'create' in call.data:
+            call_create_card(call)
+
+        elif 'rename' in call.data:
+            call_rename_card(call)
+
+        elif 'delete' in call.data:
+            if 'yes' in call.data:
+                pass
+
+            elif 'no' in call.data:
+                pass
+
+            else:
+                pass
+        
+        else:
+            call_cards_menu(call)
 
     elif call.data == 'home':
         call_home(call)
@@ -124,12 +147,11 @@ def call_collections_menu(call):
                             db_table='collection')
     collections_info = fetch_collections.user_collections()
 
-    buttons = {}
-    collections_keyboard = None
     if collections_info:
-        for collection in collections_info:
-            buttons[collection[3]] = f'collection_show_{collection[1]}'
+        buttons = buttons_format('collection_show_{}', collections_info, 3, 1)
         collections_keyboard = keyboard_maker(2, **buttons)
+    else:
+        collections_keyboard = None
 
     collections_menu = keyboard_maker(row_width=2,
                                     keyboard=collections_keyboard,
@@ -159,9 +181,9 @@ def call_create_collection(call):
                             db_table='collection')
     insert_collection.create_collection(key, date)
 
-    answer_text = Messages.COLLECTIONS['CREATE_COLLECTION']
-    bot.answer_callback_query(call.id, answer_text, True)
-    bot.send_message(call.message.chat.id, answer_text)
+    text = Messages.COLLECTIONS['CREATE_COLLECTION']
+    bot.answer_callback_query(call.id, text, True)
+    bot.send_message(call.message.chat.id, text)
     bot.register_next_step_handler(call.message, collection_name)
 
 def collection_name(message):
@@ -174,7 +196,7 @@ def collection_name(message):
     result = duplicate_name.copy_check('name', message.text)
     
     if result:
-        bot.send_message(message.chat.id, Messages.ERRORS[4])
+        bot.send_message(message.chat.id, Messages.ERRORS[3])
         bot.register_next_step_handler(message, collection_name)
         return
 
@@ -189,8 +211,8 @@ def collection_name(message):
     update_user_status.user_attribute('session', None)
     update_user_status.change_user_attribute('collections', 1)
 
-    answer_text = Messages.COLLECTIONS['COLLECTION_CREATED']
-    bot.send_message(message.chat.id, answer_text.format(message.text))
+    text = Messages.COLLECTIONS['COLLECTION_CREATED']
+    bot.send_message(message.chat.id, text.format(message.text))
     bot_private_office(message)
 
 
@@ -226,9 +248,9 @@ def call_rename_collection(call):
     update_user_status.user_attribute('action', 2)
     update_user_status.user_attribute('session', key)
 
-    answer_text = Messages.COLLECTIONS['RENAME_COLLECTION']
-    bot.answer_callback_query(call.id, answer_text, True)
-    bot.send_message(call.message.chat.id, answer_text)
+    text = Messages.COLLECTIONS['RENAME_COLLECTION']
+    bot.answer_callback_query(call.id, text, True)
+    bot.send_message(call.message.chat.id, text)
     bot.register_next_step_handler(call.message, rename_collection)
 
 def rename_collection(message):
@@ -241,7 +263,7 @@ def rename_collection(message):
     result = duplicate_name.copy_check('name', message.text)
     
     if result:
-        bot.send_message(message.chat.id, Messages.ERRORS[4])
+        bot.send_message(message.chat.id, Messages.ERRORS[3])
         bot.register_next_step_handler(message, collection_name)
         return
 
@@ -256,8 +278,8 @@ def rename_collection(message):
     update_user_status.user_attribute('action', 0)
     update_user_status.user_attribute('session', None)
 
-    answer = Messages.COLLECTIONS['COLLECTION_RENAMED']
-    bot.send_message(message.chat.id, answer.format(old_name, message.text))
+    text = Messages.COLLECTIONS['COLLECTION_RENAMED']
+    bot.send_message(message.chat.id, text.format(old_name, message.text))
     bot_private_office(message)
 
 def call_delete_collection_menu(call):
@@ -303,6 +325,180 @@ def call_delete_collection_no(call):
     call_collection_menu(call)
 
 
+def call_cards_menu(call):
+    '''Карты определенной коллекции пользователя'''
+
+    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
+    collection_name = collection_info.collection_attribute(key, 'name')
+
+    fetch_cards = Fetch(call.message.chat.id, 'collections', 'card')
+    cards_info = fetch_cards.user_cards(key)
+    
+    if cards_info:
+        buttons = buttons_format('card_show_{}', cards_info, 4, 2)
+        cards_keyboard = keyboard_maker(2, **buttons)
+    else:
+        cards_keyboard = None
+
+    cards_buttons = keyboard_format(Messages.CARDS_BUTTONS, key)
+    cards_menu = keyboard_maker(2, cards_keyboard, **cards_buttons)
+
+    bot.answer_callback_query(call.id)
+    text = Messages.CARDS['INTERFACE'].format(collection_name)
+    bot.edit_message_text(text=text,
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=cards_menu)
+
+def call_create_card(call):
+    '''Создание карты'''
+
+    if error_handler(call.message) or cancel_handler(call.message):
+        return
+    
+    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    card_key = f'c-{random.randint(1, 1000000)}-{random.randint(1, 1000)}-d'
+    date = datetime.now()
+
+    update_user_status = Update(call.message.chat.id)
+    update_user_status.user_attribute('action', 3)
+    update_user_status.user_attribute('session', card_key)
+
+    insert_collection = Insert(user_id=call.message.chat.id,
+                            db_name='collections',
+                            db_table='card')
+    insert_collection.create_card(key, card_key, date)
+
+    text = Messages.CARDS['CARD_NAME']
+    bot.answer_callback_query(call.id, text, True)
+    bot.send_message(call.message.chat.id, text)
+    bot.register_next_step_handler(call.message, card_name)
+
+def card_name(message):
+    '''Получение названия карты'''
+
+    if cancel_handler(message):
+        return
+    
+    user_status = Fetch(message.chat.id)
+    card_key = user_status.user_attribute('session')
+    card_collection_info = Fetch(message.chat.id, 'collections', 'card')
+    key = card_collection_info.card_attribute(card_key, 'key')
+
+    duplicate_name = Fetch(message.chat.id, 'collections', 'card')
+    result = duplicate_name.card_copy_check(key, 'name', message.text)
+    
+    if result:
+        bot.send_message(message.chat.id, Messages.ERRORS[6])
+        bot.register_next_step_handler(message, card_name)
+        return
+    
+    insert_name = Update(message.chat.id, 'collections', 'card')
+    insert_name.card_attribute(card_key, 'name', message.text)
+
+    text = Messages.CARDS['CARD_DESCRIPTION']
+    bot.send_message(message.chat.id, text)
+    bot.register_next_step_handler(message, card_description)
+
+def card_description(message):
+    '''Получение описания карты'''
+
+    if cancel_handler(message):
+        return
+
+    user_status = Fetch(message.chat.id)
+    card_key = user_status.user_attribute('session')
+
+    card_info = Fetch(message.chat.id, 'collections', 'card')
+    card_name = card_info.card_attribute(card_key, 'name')
+    
+    insert_name = Update(message.chat.id, 'collections', 'card')
+    insert_name.card_attribute(card_key, 'description', message.text)
+
+    update_user_status = Update(message.chat.id)
+    update_user_status.user_attribute('action', 0)
+    update_user_status.user_attribute('session', None)
+    update_user_status.change_user_attribute('cards', 1)
+
+    text = Messages.CARDS['CARD_CREATED']
+    bot.send_message(message.chat.id, text.format(card_name))
+    bot_private_office(message)
+
+
+def call_card_menu(call):
+    '''Главное меню карточки'''
+
+    card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+
+    card_info = Fetch(call.message.chat.id, 'collections', 'card')
+    card_name = card_info.card_attribute(card_key, 'name')
+    card_collection = card_info.card_attribute(card_key, 'key')
+    card_description = card_info.card_attribute(card_key, 'description')
+    card_date = card_info.card_attribute(card_key, 'date')
+
+    m_buttons = keyboard_format(Messages.CARD_MENU_BUTTONS, card_key)
+    card_buttons = keyboard_maker(2, **m_buttons)
+    b_buttons = keyboard_format(Messages.CARD_BOTTOM_BUTTONS, card_collection)
+    card_menu = keyboard_maker(2, card_buttons, **b_buttons)
+
+    main_text = Messages.CARD_MENU['INTERFACE'].format(card_name,
+                                                    card_description,
+                                                    card_date[:16])
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=main_text,
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=card_menu)
+
+def call_rename_card(call):
+    '''Переименование карты'''
+
+    if error_handler(call.message) or cancel_handler(call.message):
+        return
+    
+    card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    update_user_status = Update(call.message.chat.id)
+    update_user_status.user_attribute('action', 5)
+    update_user_status.user_attribute('session', card_key)
+
+    text = Messages.CARDS['RENAME_CARD']
+    bot.answer_callback_query(call.id, text, True)
+    bot.send_message(call.message.chat.id, text)
+    bot.register_next_step_handler(call.message, rename_card)
+
+def rename_card(message):
+    '''Получение нового названия карты'''
+
+    if cancel_handler(message):
+        return
+
+    user_status = Fetch(message.chat.id)
+    card_key = user_status.user_attribute('session')
+    card_collection_info = Fetch(message.chat.id, 'collections', 'card')
+    key = card_collection_info.card_attribute(card_key, 'key')
+    
+    duplicate_name = Fetch(message.chat.id, 'collections', 'card')
+    result = duplicate_name.card_copy_check(key, 'name', message.text)
+    old_name = duplicate_name.card_attribute(card_key, 'name')
+    
+    if result:
+        bot.send_message(message.chat.id, Messages.ERRORS[6])
+        bot.register_next_step_handler(message, rename_card)
+        return
+
+    insert_name = Update(message.chat.id, 'collections', 'card')
+    insert_name.card_attribute(card_key, 'name', message.text)
+
+    update_user_status = Update(message.chat.id)
+    update_user_status.user_attribute('action', 0)
+    update_user_status.user_attribute('session', None)
+
+    text = Messages.CARDS['CARD_RENAMED']
+    bot.send_message(message.chat.id, text.format(old_name, message.text))
+    bot_private_office(message)
+
+
 def call_home(call):
     '''Возвращение в личный кабинет пользователя'''
 
@@ -343,6 +539,18 @@ def keyboard_format(buttons=None, format_object=None):
 
     return keyboard
 
+def buttons_format(call='', object_info=None,
+                call_id=None, name_id=None):
+    '''Создание кнопок с вставляемыми элементами
+    
+    :return: Кнопки'''
+
+    buttons = {}
+    for item in object_info:
+        buttons[item[call_id]] = call.format(item[name_id])
+            
+    return buttons
+
 def error_handler(message):
     '''Проверка на наличие ошибок'''
 
@@ -358,8 +566,16 @@ def error_handler(message):
         bot.send_message(message.chat.id, Messages.ERRORS[2])
         return True
 
+    elif status == 3:
+        bot.send_message(message.chat.id, Messages.ERRORS[4])
+        return True
+
+    elif status == 4:
+        bot.send_message(message.chat.id, Messages.ERRORS[5])
+        return True
+
     elif message.message_id != menu_id and status != 1:
-        bot.edit_message_text(text=Messages.ERRORS[3],
+        bot.edit_message_text(text=Messages.ERRORS[0],
                             chat_id=message.chat.id,
                             message_id=message.message_id)
         return True
