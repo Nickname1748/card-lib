@@ -304,6 +304,16 @@ class Update:
                         WHERE user_id=?''', (self.user_id,))
         connect.commit()
 
+    def change_collection_attribute(self, key='', attribute='', value=0):
+        '''Изменение переменной с учетом её предыдущего значения'''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''UPDATE {self.db_table}
+                        SET {attribute} = {attribute} + {value}
+                        WHERE (user_id=?) AND (key=?)''', (self.user_id, key))
+        connect.commit()
+
 
 class Delete:
     def __init__(self, user_id=None, db_name='users', db_table='user'):
