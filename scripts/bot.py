@@ -60,7 +60,6 @@ def bot_cancel(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def bot_callback_query(call):
-    print(call.data)
     if error_handler(call.message):
         return
 
@@ -103,15 +102,21 @@ def bot_callback_query(call):
         elif 'rename' in call.data:
             call_rename_card(call)
 
+        elif 'description' in call.data:
+            call_edit_card_description(call)
+
+        elif 'level' in call.data:
+            pass
+
         elif 'delete' in call.data:
             if 'yes' in call.data:
-                pass
+                call_delete_card_yes(call)
 
             elif 'no' in call.data:
-                pass
+                call_delete_card_no(call)
 
             else:
-                pass
+                call_delete_card_menu(call)
         
         else:
             call_cards_menu(call)
@@ -299,10 +304,8 @@ def call_delete_collection_yes(call):
     '''Согласие на удаление коллекции'''
 
     key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
-    fetch_collection_name = Fetch(user_id=call.message.chat.id,
-                                db_name='collections',
-                                db_table='collection')
-    collection_name = fetch_collection_name.collection_attribute(key, 'name')
+    collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
+    collection_name = collection_info.collection_attribute(key, 'name')
 
     update_user_status = Update(call.message.chat.id)
     update_user_status.change_user_attribute('collections', -1)
@@ -312,9 +315,9 @@ def call_delete_collection_yes(call):
                             db_table='collection')
     delete_collection.delete_collection(key)
 
-    successful_delete_text = Messages.DELETE_COLLECTION[
-                                'DELETE_SUCCESSFUL'].format(collection_name)
-    bot.answer_callback_query(call.id, successful_delete_text, True)
+    text = Messages.DELETE_COLLECTION[
+                    'DELETE_SUCCESSFUL'].format(collection_name)
+    bot.answer_callback_query(call.id, text, True)
     call_collections_menu(call)
 
 def call_delete_collection_no(call):
@@ -410,6 +413,9 @@ def card_description(message):
     user_status = Fetch(message.chat.id)
     card_key = user_status.user_attribute('session')
 
+    card_collection_info = Fetch(message.chat.id, 'collections', 'card')
+    key = card_collection_info.card_attribute(card_key, 'key')
+
     card_info = Fetch(message.chat.id, 'collections', 'card')
     card_name = card_info.card_attribute(card_key, 'name')
     
@@ -421,13 +427,16 @@ def card_description(message):
     update_user_status.user_attribute('session', None)
     update_user_status.change_user_attribute('cards', 1)
 
+    collection_cards = Update(message.chat.id, 'collections', 'collection')
+    collection_cards.change_collection_attribute(key, 'cards', 1)
+
     text = Messages.CARDS['CARD_CREATED']
     bot.send_message(message.chat.id, text.format(card_name))
     bot_private_office(message)
 
 
 def call_card_menu(call):
-    '''Главное меню карточки'''
+    '''Главное меню карты'''
 
     card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
 
@@ -459,7 +468,7 @@ def call_rename_card(call):
     
     card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
     update_user_status = Update(call.message.chat.id)
-    update_user_status.user_attribute('action', 5)
+    update_user_status.user_attribute('action', 4)
     update_user_status.user_attribute('session', card_key)
 
     text = Messages.CARDS['RENAME_CARD']
@@ -497,6 +506,87 @@ def rename_card(message):
     text = Messages.CARDS['CARD_RENAMED']
     bot.send_message(message.chat.id, text.format(old_name, message.text))
     bot_private_office(message)
+
+def call_edit_card_description(call):
+    '''Изменение описания карты'''
+
+    if error_handler(call.message) or cancel_handler(call.message):
+        return
+    
+    card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    update_user_status = Update(call.message.chat.id)
+    update_user_status.user_attribute('action', 5)
+    update_user_status.user_attribute('session', card_key)
+
+    text = Messages.CARDS['EDIT_DESCRIPTION_CARD']
+    bot.answer_callback_query(call.id, text, True)
+    bot.send_message(call.message.chat.id, text)
+    bot.register_next_step_handler(call.message, edit_card_description)
+
+def edit_card_description(message):
+    '''Получение нового описания карты'''
+
+    if cancel_handler(message):
+        return
+
+    user_status = Fetch(message.chat.id)
+    card_key = user_status.user_attribute('session')
+    
+    card_info = Fetch(message.chat.id, 'collections', 'card')
+    old_description = card_info.card_attribute(card_key, 'description')
+
+    insert_description = Update(message.chat.id, 'collections', 'card')
+    insert_description.card_attribute(card_key, 'description', message.text)
+
+    update_user_status = Update(message.chat.id)
+    update_user_status.user_attribute('action', 0)
+    update_user_status.user_attribute('session', None)
+
+    text = Messages.CARDS['CARD_EDITED']
+    bot.send_message(message.chat.id, text.format(old_description,
+                                                message.text))
+    bot_private_office(message)
+
+def call_delete_card_menu(call):
+    '''Меню удаления карты'''
+
+    card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    buttons = keyboard_format(Messages.DELETE_CARD_BUTTONS, card_key)
+    delete_card = keyboard_maker(1, **buttons)
+
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=Messages.DELETE_CARD['DELETE'],
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=delete_card)
+
+def call_delete_card_yes(call):
+    '''Согласие на удаление карты'''
+
+    card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    card_info = Fetch(call.message.chat.id, 'collections', 'card')
+    card_name = card_info.card_attribute(card_key, 'name')
+    key = card_info.card_attribute(card_key, 'key')
+
+    update_user_status = Update(call.message.chat.id)
+    update_user_status.change_user_attribute('cards', -1)
+
+    collection_cards = Update(call.message.chat.id, 'collections', 'collection')
+    collection_cards.change_collection_attribute(key, 'cards', -1)
+
+    delete_card = Delete(call.message.chat.id, 'collections', 'card')
+    delete_card.delete_card(card_key)
+
+    text = Messages.DELETE_CARD['DELETE_SUCCESSFUL'].format(card_name)
+    bot.answer_callback_query(call.id, text, True)
+    call_collections_menu(call)
+
+def call_delete_card_no(call):
+    '''Отмена удаления карты'''
+
+    canceled_delete_text = Messages.DELETE_CARD['DELETE_CANCELED']
+    bot.answer_callback_query(call.id, canceled_delete_text, True)
+    call_card_menu(call)
 
 
 def call_home(call):
@@ -572,6 +662,10 @@ def error_handler(message):
 
     elif status == 4:
         bot.send_message(message.chat.id, Messages.ERRORS[5])
+        return True
+    
+    elif status == 5:
+        bot.send_message(message.chat.id, Messages.ERRORS[7])
         return True
 
     elif message.message_id != menu_id and status != 1:
