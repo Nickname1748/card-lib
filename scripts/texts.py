@@ -76,7 +76,7 @@ class Messages:
         'RENAME_CARD' : 'Введите новое название карточки.',
         'CARD_RENAMED' : 'Вы переименовали карточку «{}» в карту «{}».',
         'EDIT_DESCRIPTION_CARD' : 'Введите новое описание карточки.',
-        'CARD_EDITED' : 'Вы изменили описание карточки  с "{}" на "{}."'
+        'CARD_EDITED' : 'Вы успешно изменили описание карточки.'
     }
 
     CARDS_BUTTONS = {
@@ -85,13 +85,21 @@ class Messages:
     }
     
     CARD_MENU = {
-        'INTERFACE' : 'Название: {}.\nОписание: {}\nДата создания: {}.'
+        'INTERFACE' : '{}\n\n{}\n\n',
+        'INFO_INTERFACE' : 'Название: {}\n\nОписание: {}\n\nДата создания: {}.'
     }
 
     CARD_MENU_BUTTONS = {
         'Изменить название' : 'card_rename_{}',
         'Изменить описание' : 'card_description_{}',
-        'Изменить уровень' : 'card_level_{}',
+        'Показать информацию' : 'card_on_info_{}',
+        'Удалить карту' : 'card_delete_{}'
+    }
+
+    CARD_INFO_MENU_BUTTONS = {
+        'Изменить название' : 'card_rename_{}',
+        'Изменить описание' : 'card_description_{}',
+        'Скрыть информацию' : 'card_off_info_{}',
         'Удалить карту' : 'card_delete_{}'
     }
 
