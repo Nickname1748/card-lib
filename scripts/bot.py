@@ -363,7 +363,8 @@ def call_delete_collection_no(call):
 def call_cards_menu(call):
     '''Карты определенной коллекции пользователя'''
 
-    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    key = re.findall(r'\w-\d+-\d+-\w', call.data)[0]
+    level = int(re.findall(r'_\w+-\d+-\d+-\w+_\w+_(\d+)', call.data)[0])
 
     # Получение названия коллекции из базы данных
     collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
@@ -374,13 +375,17 @@ def call_cards_menu(call):
     cards_info = fetch_cards.user_cards(key)
     
     if cards_info:
+        # Добавление в меню кнопок навигации
+        nav_obj = cards_info[8*level:8*(level+1)]
+        navigation = keyboard_navigation(key, cards_info, level)
+
         # Создание меню из всех карт определенной коллекции пользователя
-        buttons = buttons_format('card_show_{}', cards_info, 4, 2)
-        cards_keyboard = keyboard_maker(2, **buttons)
+        buttons = buttons_format('card_show_{}', nav_obj, 4, 2)
+        cards_keyboard = keyboard_maker(2, navigation, **buttons)
     else:
         cards_keyboard = None
 
-    # Добавление в меню кнопок навигации
+    # Добавление в меню кнопок выхода
     cards_buttons = keyboard_format(Messages.CARDS_BUTTONS, key)
     cards_menu = keyboard_maker(2, cards_keyboard, **cards_buttons)
 
@@ -709,7 +714,7 @@ def keyboard_maker(row_width=3, keyboard=None, **buttons):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
-def keyboard_format(buttons=None, format_object=None):
+def keyboard_format(buttons, format_object):
     '''
     Создание клавиатур с вставляемыми элементами
     
@@ -722,7 +727,7 @@ def keyboard_format(buttons=None, format_object=None):
 
     return keyboard
 
-def buttons_format(call, object_info=None, call_id=None, name_id=None):
+def buttons_format(call, object_info, call_id=None, name_id=None):
     '''Создание кнопок с вставляемыми элементами
     
     :return: Кнопки
@@ -733,6 +738,58 @@ def buttons_format(call, object_info=None, call_id=None, name_id=None):
         buttons[item[call_id]] = call.format(item[name_id])
             
     return buttons
+
+def keyboard_navigation(key, nav_obj, level):
+    '''Создание навигационной клавиатуры'''
+    
+    navigation = {
+        'main': '• {} •', 
+        'other': '{}', 
+        'data': 'cards_{}_level_{}'
+    }
+    lenght = len(nav_obj)
+    system_len = lenght // 8 if lenght % 8 == 0 else lenght // 8 + 1
+
+    keyboard = types.InlineKeyboardMarkup(2)
+    buttons = []
+    if lenght < 41:
+        buttons = [types.InlineKeyboardButton(
+            text=navigation['main'].format(button + 1)
+            if button == level
+            else navigation['other'].format(button + 1),
+            callback_data=navigation['data'].format(key, button))
+            for button in range(system_len)]
+    else:
+        for button in range(5):
+            if level == 0 or level  == 1:
+                nav = {0: '{}', 1: '{}', 2: '{}', 3: '{} ›', 4: '{} »'}
+                nav[level] = '• {} •'
+
+                button_format = system_len if button == 4 else button + 1
+                text = nav[button].format(button_format)
+            elif level == (system_len - 1) or level == (system_len - 2):
+                nav = {0: '« {}', 1: '‹ {}', 2: '{}', 3: '{}', 4: '{}'}
+                nav[5 + level - system_len] = '• {} •'
+
+                button_format = button+1 if button==0 else system_len+button-4
+                text = nav[button].format(button_format)
+            else:
+                nav = {0: '« {}', 1: '‹ {}', 2: '• {} •', 3: '{} ›', 4: '{} »'}
+
+                if button == 0:
+                    button_format = button + 1
+                elif button == 1 or button == 2 or button == 3:
+                    button_format = level + button - 1
+                else:
+                    button_format = system_len
+
+                text = nav[button].format(button_format)
+
+            buttons.append(types.InlineKeyboardButton(text=text,
+                callback_data=navigation['data'].format(key, button_format-1)))
+
+    keyboard.row(*buttons)
+    return keyboard
 
 def error_handler(message):
     '''
