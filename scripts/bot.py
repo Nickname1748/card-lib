@@ -375,8 +375,8 @@ def call_cards_menu(call):
     cards_info = fetch_cards.user_cards(key)
     
     if cards_info:
-        # Добавление в меню кнопок навигации
-        nav_obj = cards_info[8*level:8*(level+1)]
+        # Добавление кнопок навигации в меню
+        nav_obj = cards_info[8*level : 8*(level + 1)]
         navigation = keyboard_navigation(key, cards_info, level)
 
         # Создание меню из всех карт определенной коллекции пользователя
@@ -385,7 +385,7 @@ def call_cards_menu(call):
     else:
         cards_keyboard = None
 
-    # Добавление в меню кнопок выхода
+    # Добавление кнопок выхода в меню
     cards_buttons = keyboard_format(Messages.CARDS_BUTTONS, key)
     cards_menu = keyboard_maker(2, cards_keyboard, **cards_buttons)
 
@@ -739,54 +739,63 @@ def buttons_format(call, object_info, call_id=None, name_id=None):
             
     return buttons
 
-def keyboard_navigation(key, nav_obj, level):
-    '''Создание навигационной клавиатуры'''
+def keyboard_navigation(key, nav_obj, level=0, sep=8):
+    '''
+    Создание навигационной клавиатуры
     
-    navigation = {
-        'main': '• {} •', 
-        'other': '{}', 
-        'data': 'cards_{}_level_{}'
-    }
+    :return: Клавиатура
+    '''
+    
+    navigation = {0: '• {} •', 1: '{}', 'data': 'cards_{}_level_{}'}
     lenght = len(nav_obj)
-    system_len = lenght // 8 if lenght % 8 == 0 else lenght // 8 + 1
+    system_len = lenght//sep if lenght%sep == 0 else lenght//sep + 1
 
-    keyboard = types.InlineKeyboardMarkup(2)
     buttons = []
-    if lenght < 41:
+    keyboard = types.InlineKeyboardMarkup(2)
+    
+    # Создание клавиатуры без навигации
+    if lenght < 5*sep + 1:
         buttons = [types.InlineKeyboardButton(
-            text=navigation['main'].format(button + 1)
+            text=navigation[0].format(button + 1)
             if button == level
-            else navigation['other'].format(button + 1),
+            else navigation[1].format(button + 1),
             callback_data=navigation['data'].format(key, button))
             for button in range(system_len)]
+
+    # Создание клавиатуры с навигацией
     else:
         for button in range(5):
+            # Обработка первых двух кнопок
             if level == 0 or level  == 1:
                 nav = {0: '{}', 1: '{}', 2: '{}', 3: '{} ›', 4: '{} »'}
                 nav[level] = '• {} •'
 
-                button_format = system_len if button == 4 else button + 1
-                text = nav[button].format(button_format)
+                data = system_len if button == 4 else button + 1
+                text = nav[button].format(data)
+
+            # Обработка последних двух кнопок
             elif level == (system_len - 1) or level == (system_len - 2):
                 nav = {0: '« {}', 1: '‹ {}', 2: '{}', 3: '{}', 4: '{}'}
                 nav[5 + level - system_len] = '• {} •'
 
-                button_format = button+1 if button==0 else system_len+button-4
-                text = nav[button].format(button_format)
+                data = button + 1 if button == 0 else system_len + button - 4
+                text = nav[button].format(data)
+            
+            # Обработка полной навигации
             else:
                 nav = {0: '« {}', 1: '‹ {}', 2: '• {} •', 3: '{} ›', 4: '{} »'}
 
                 if button == 0:
-                    button_format = button + 1
+                    data = button + 1
                 elif button == 1 or button == 2 or button == 3:
-                    button_format = level + button - 1
+                    data = level + button - 1
                 else:
-                    button_format = system_len
+                    data = system_len
 
-                text = nav[button].format(button_format)
+                text = nav[button].format(data)
 
             buttons.append(types.InlineKeyboardButton(text=text,
-                callback_data=navigation['data'].format(key, button_format-1)))
+                    callback_data=navigation['data'].format(key, data - 1)))
 
     keyboard.row(*buttons)
     return keyboard
@@ -833,7 +842,11 @@ def error_handler(message):
     return False
 
 def cancel_handler(message):
-    '''Проверка на отмену операции'''
+    '''
+    Проверка на отмену операции
+
+    :return:
+    '''
 
     if (not message.text
             or message.text == '/cancel'
