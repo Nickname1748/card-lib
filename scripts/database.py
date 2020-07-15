@@ -35,7 +35,7 @@ class Create:
                         (user_id integer, key text,
                         card_key integer, date text,
                         name text, description text,
-                        status integer)''')
+                        score integer)''')
         connect.commit()
 
 
@@ -305,13 +305,24 @@ class Update:
         connect.commit()
 
     def change_collection_attribute(self, key='', attribute='', value=0):
-        '''Изменение переменной с учетом её предыдущего значения'''
+        '''Изменение переменной коллекции с учетом её предыдущего значения'''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
         cursor.execute(f'''UPDATE {self.db_table}
                         SET {attribute} = {attribute} + {value}
                         WHERE (user_id=?) AND (key=?)''', (self.user_id, key))
+        connect.commit()
+
+    def change_card_attribute(self, card_key='', attribute='', value=0):
+        '''Изменение переменной карты с учетом её предыдущего значения'''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''UPDATE {self.db_table}
+                        SET {attribute} = {attribute} + {value}
+                        WHERE (user_id=?)
+                        AND (card_key=?)''', (self.user_id, card_key))
         connect.commit()
 
 
