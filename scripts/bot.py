@@ -80,7 +80,7 @@ def bot_callback_query(call):
             call_create_collection(call)
 
         elif 'continue' in call.data:
-            pass
+            call_collection_continue(call)
 
         elif 'rename' in call.data:
             call_rename_collection(call)
@@ -104,6 +104,12 @@ def bot_callback_query(call):
 
         elif 'create' in call.data:
             call_create_card(call)
+
+        elif 'result' in call.data:
+            call_result(call)
+
+        elif 'continue' in call.data:
+            call_card_continue(call)
 
         elif 'rename' in call.data:
             call_rename_card(call)
@@ -238,6 +244,33 @@ def collection_name(message):
     bot.send_message(message.chat.id, text.format(message.text))
     bot_private_office(message)
 
+def call_collection_continue(call):
+    '''Программа обучения'''
+
+    key = re.findall(r'\w-\d+-\d+-\w', call.data)[0]
+
+    # Поиск карты, которую пользователь повторил меньшее количество раз
+    cards_info = Fetch(call.message.chat.id, 'collections', 'card')
+    cards = cards_info.user_cards(key)
+
+    if not cards:
+        bot.answer_callback_query(call.id, Messages.ERRORS[8], True)
+        return
+
+    rare_card = sorted(cards, key=lambda item: item[6])[0]
+
+    # Создание меню изучения карты
+    keyboard = keyboard_format(buttons=Messages.COLLECTION_CONTINUE_BUTTONS,
+                            card=rare_card[2],
+                            collection=rare_card[1])
+    continue_menu = keyboard_maker(2, **keyboard)
+    
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=rare_card[4],
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=continue_menu)
+
 
 def call_collection_menu(call):
     '''Главное меню коллекции'''
@@ -251,8 +284,8 @@ def call_collection_menu(call):
     collection_date = collection_info.collection_attribute(key, 'date')
 
     # Создание меню коллекции
-    buttons = keyboard_format(Messages.COLLECTION_BUTTONS, key)
-    collection_menu = keyboard_maker(2, **buttons)
+    keyboard = keyboard_format(Messages.COLLECTION_BUTTONS, collection=key)
+    collection_menu = keyboard_maker(2, **keyboard)
     main_text = Messages.COLLECTION_MENU['INTERFACE'].format(collection_name,
                                                         collection_cards,
                                                         collection_date[:16])
@@ -319,7 +352,8 @@ def call_delete_collection_menu(call):
 
     # Создание меню удаления коллекции
     key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
-    buttons = keyboard_format(Messages.DELETE_COLLECTION_BUTTONS, key)
+    buttons = keyboard_format(buttons=Messages.DELETE_COLLECTION_BUTTONS,
+                            collection=key)
     delete_collection = keyboard_maker(1, **buttons)
 
     bot.answer_callback_query(call.id)
@@ -386,8 +420,8 @@ def call_cards_menu(call):
         cards_keyboard = None
 
     # Добавление кнопок выхода в меню
-    cards_buttons = keyboard_format(Messages.CARDS_BUTTONS, key)
-    cards_menu = keyboard_maker(2, cards_keyboard, **cards_buttons)
+    keyboard = keyboard_format(Messages.CARDS_BUTTONS, collection=key)
+    cards_menu = keyboard_maker(2, cards_keyboard, **keyboard)
 
     bot.answer_callback_query(call.id)
     text = Messages.CARDS['INTERFACE'].format(collection_name)
@@ -496,14 +530,14 @@ def call_card_menu(call):
     # Получение информации о карте из базы данных
     card_info = Fetch(call.message.chat.id, 'collections', 'card')
     card_name = card_info.card_attribute(card_key, 'name')
-    card_collection = card_info.card_attribute(card_key, 'key')
+    key = card_info.card_attribute(card_key, 'key')
     card_description = card_info.card_attribute(card_key, 'description')
 
     # Создание меню карты
-    m_buttons = keyboard_format(Messages.CARD_MENU_BUTTONS, card_key)
-    card_buttons = keyboard_maker(2, **m_buttons)
-    b_buttons = keyboard_format(Messages.CARD_BOTTOM_BUTTONS, card_collection)
-    card_menu = keyboard_maker(2, card_buttons, **b_buttons)
+    keyboard = keyboard_format(buttons=Messages.CARD_ORIGINAL_MENU_BUTTONS,
+                            card=card_key,
+                            collection=key)
+    card_menu = keyboard_maker(2, **keyboard)
 
     main_text = Messages.CARD_MENU['INTERFACE'].format(card_name,
                                                     card_description)
@@ -570,6 +604,41 @@ def rename_card(message):
     bot.send_message(message.chat.id, text.format(old_name, message.text))
     bot_private_office(message)
 
+def call_card_continue(call):
+    '''Начало изучения карты'''
+
+    card_key = re.findall(r'\w-\d+-\d+-\w', call.data)[0]
+
+    # Получение информации о карте из базы данных
+    card_info = Fetch(call.message.chat.id, 'collections', 'card')
+    description = card_info.card_attribute(card_key, 'description')
+    key = card_info.card_attribute(card_key, 'key')
+
+    # Создание меню результата карты
+    keyboard = keyboard_format(buttons=Messages.CARD_RESULT_BUTTONS,
+                            card=card_key,
+                            collection=key)
+    result_menu = keyboard_maker(1, **keyboard)
+    
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(text=description,
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        parse_mode='Markdown',
+                        reply_markup=result_menu)
+
+def call_result(call):
+    '''Переход к следующей карте'''
+
+    card_key = re.findall(r'_\w-\d+-\d+-\w_(\w-\d+-\d+-\w)', call.data)[0]
+    score = int(call.data[-1])
+
+    # Запись нового результата в базу данных
+    card_score = Update(call.message.chat.id, 'collections', 'card')
+    card_score.change_card_attribute(card_key, 'score', score)
+
+    call_collection_continue(call)
+
 def call_edit_card_description(call):
     '''Изменение описания карты'''
 
@@ -616,14 +685,14 @@ def call_delete_card_menu(call):
     card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
 
     # Создание меню удаления карты
-    buttons = keyboard_format(Messages.DELETE_CARD_BUTTONS, card_key)
-    delete_card = keyboard_maker(1, **buttons)
+    keyboard = keyboard_format(Messages.DELETE_CARD_BUTTONS, card=card_key)
+    delete_menu = keyboard_maker(1, **keyboard)
 
     bot.answer_callback_query(call.id)
     bot.edit_message_text(text=Messages.DELETE_CARD['DELETE'],
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=delete_card)
+                        reply_markup=delete_menu)
 
 def call_delete_card_yes(call):
     '''Согласие на удаление карты'''
@@ -666,19 +735,21 @@ def call_info_on(call):
     # Получение информации о карте из базы даных
     card_info = Fetch(call.message.chat.id, 'collections', 'card')
     card_name = card_info.card_attribute(card_key, 'name')
-    card_collection = card_info.card_attribute(card_key, 'key')
+    key = card_info.card_attribute(card_key, 'key')
     card_description = card_info.card_attribute(card_key, 'description')
     card_date = card_info.card_attribute(card_key, 'date')
+    card_score = card_info.card_attribute(card_key, 'score')
 
     # Создание меню карты
-    m_buttons = keyboard_format(Messages.CARD_INFO_MENU_BUTTONS, card_key)
-    card_buttons = keyboard_maker(2, **m_buttons)
-    b_buttons = keyboard_format(Messages.CARD_BOTTOM_BUTTONS, card_collection)
-    card_menu = keyboard_maker(2, card_buttons, **b_buttons)
+    keyboard = keyboard_format(buttons=Messages.CARD_INFO_MENU_BUTTONS,
+                            card=card_key,
+                            collection=key)
+    card_menu = keyboard_maker(2, **keyboard)
 
     main_text = Messages.CARD_MENU['INFO_INTERFACE'].format(card_name,
                                                     card_description,
-                                                    card_date[:16])
+                                                    card_date[:16],
+                                                    card_score)
     bot.answer_callback_query(call.id)
     bot.edit_message_text(text=main_text,
                         chat_id=call.message.chat.id,
@@ -714,7 +785,7 @@ def keyboard_maker(row_width=3, keyboard=None, **buttons):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
-def keyboard_format(buttons, format_object):
+def keyboard_format(buttons, **format_object):
     '''
     Создание клавиатур с вставляемыми элементами
     
@@ -723,7 +794,7 @@ def keyboard_format(buttons, format_object):
 
     keyboard = {}
     for button in buttons:
-        keyboard[button] = buttons[button].format(format_object)
+        keyboard[button] = buttons[button].format(**format_object)
 
     return keyboard
 
