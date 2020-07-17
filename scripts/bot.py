@@ -66,78 +66,81 @@ def bot_cancel(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def bot_callback_query(call):
-    if error_handler(call.message):
-        return
+    try:
+        if error_handler(call.message):
+            return
 
-    elif call.data == 'profile':
-        call_profile_menu(call)
+        elif call.data == 'profile':
+            call_profile_menu(call)
 
-    elif 'collection' in call.data:
-        if 'show' in call.data:
-            call_collection_menu(call)
+        elif 'collection' in call.data:
+            if 'show' in call.data:
+                call_collection_menu(call)
 
-        elif 'create' in call.data:
-            call_create_collection(call)
+            elif 'create' in call.data:
+                call_create_collection(call)
 
-        elif 'continue' in call.data:
-            call_collection_continue(call)
+            elif 'continue' in call.data:
+                call_collection_continue(call)
 
-        elif 'rename' in call.data:
-            call_rename_collection(call)
+            elif 'rename' in call.data:
+                call_rename_collection(call)
 
-        elif 'delete' in call.data:
-            if 'yes' in call.data:
-                call_delete_collection_yes(call)
+            elif 'delete' in call.data:
+                if 'yes' in call.data:
+                    call_delete_collection_yes(call)
 
-            elif 'no' in call.data:
-                call_delete_collection_no(call)
+                elif 'no' in call.data:
+                    call_delete_collection_no(call)
+
+                else:
+                    call_delete_collection_menu(call)
 
             else:
-                call_delete_collection_menu(call)
+                call_collections_menu(call)
 
-        else:
-            call_collections_menu(call)
-
-    elif 'card' in call.data:
-        if 'show' in call.data:
-            call_card_menu(call)
-
-        elif 'create' in call.data:
-            call_create_card(call)
-
-        elif 'result' in call.data:
-            call_result(call)
-
-        elif 'continue' in call.data:
-            call_card_continue(call)
-
-        elif 'rename' in call.data:
-            call_rename_card(call)
-
-        elif 'description' in call.data:
-            call_edit_card_description(call)
-
-        elif 'info' in call.data:
-            if 'on' in call.data:
-                call_info_on(call)
-            else:
+        elif 'card' in call.data:
+            if 'show' in call.data:
                 call_card_menu(call)
 
-        elif 'delete' in call.data:
-            if 'yes' in call.data:
-                call_delete_card_yes(call)
+            elif 'create' in call.data:
+                call_create_card(call)
 
-            elif 'no' in call.data:
-                call_delete_card_no(call)
+            elif 'result' in call.data:
+                call_result(call)
 
+            elif 'continue' in call.data:
+                call_card_continue(call)
+
+            elif 'rename' in call.data:
+                call_rename_card(call)
+
+            elif 'description' in call.data:
+                call_edit_card_description(call)
+
+            elif 'info' in call.data:
+                if 'on' in call.data:
+                    call_info_on(call)
+                else:
+                    call_card_menu(call)
+
+            elif 'delete' in call.data:
+                if 'yes' in call.data:
+                    call_delete_card_yes(call)
+
+                elif 'no' in call.data:
+                    call_delete_card_no(call)
+
+                else:
+                    call_delete_card_menu(call)
+            
             else:
-                call_delete_card_menu(call)
-        
-        else:
-            call_cards_menu(call)
+                call_cards_menu(call)
 
-    elif call.data == 'home':
-        call_home(call)
+        elif call.data == 'home':
+            call_home(call)
+    except:
+        bot.send_message(call.message.chat.id, Messages.ASSISTANCE['LOADING'])
 
 
 def call_profile_menu(call):
@@ -160,12 +163,27 @@ def call_profile_menu(call):
                         message_id=call.message.message_id,
                         reply_markup=profile_menu)
 
+def call_home(call):
+    '''Возвращение в личный кабинет пользователя'''
 
-def call_collections_menu(call):
-    '''Коллекции пользователя'''
+    bot.answer_callback_query(call.id)
+    private_office_menu = keyboard_maker(**Messages.PRIVATE_OFFICE_BUTTONS)
+    bot.edit_message_text(text=Messages.PRIVATE_OFFICE['INTERFACE'],
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        reply_markup=private_office_menu)
+
+
+
+def collections_menu(message):
+    '''
+    Создание меню коллекций пользователя
+    
+    :return:
+    '''
 
     # Получение информации о коллекции из базы данных
-    collections = Fetch(call.message.chat.id, 'collections', 'collection')
+    collections = Fetch(message.chat.id, 'collections', 'collection')
     collections_info = collections.user_collections()
 
     if collections_info:
@@ -176,15 +194,36 @@ def call_collections_menu(call):
         collections_keyboard = None
 
     # Создание навигации
-    collections_menu = keyboard_maker(row_width=2,
-                                    keyboard=collections_keyboard,
-                                    **Messages.COLLECTIONS_BUTTONS)
+    menu = keyboard_maker(row_width=2,
+                        keyboard=collections_keyboard,
+                        **Messages.COLLECTIONS_BUTTONS)
+
+    return menu
+
+def call_collections_menu(call):
+    '''Изменение сообщения на меню с коллекциями'''
+    
+    menu = collections_menu(call.message)
 
     bot.answer_callback_query(call.id)
     bot.edit_message_text(text=Messages.COLLECTIONS['INTERFACE'],
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=collections_menu)
+                        reply_markup=menu)
+
+def send_collections_menu(message):
+    '''Отправление меню с коллекциями'''
+
+    menu = collections_menu(message)
+    menu_message = bot.send_message(chat_id=message.chat.id,
+                                    text=Messages.COLLECTIONS['INTERFACE'],
+                                    reply_markup=menu)
+
+    # Обновление id сообщения Личного кабинета
+    update_menu_id = Update(message.chat.id)
+    update_menu_id.user_attribute('menu_id', menu_message.message_id)
+
+
 
 def call_create_collection(call):
     '''Создание коллекции'''
@@ -242,7 +281,7 @@ def collection_name(message):
 
     text = Messages.COLLECTIONS['COLLECTION_CREATED']
     bot.send_message(message.chat.id, text.format(message.text))
-    bot_private_office(message)
+    send_collections_menu(message)
 
 def call_collection_continue(call):
     '''Программа обучения'''
@@ -263,7 +302,7 @@ def call_collection_continue(call):
     keyboard = keyboard_format(buttons=Messages.COLLECTION_CONTINUE_BUTTONS,
                             card=rare_card[2],
                             collection=rare_card[1])
-    continue_menu = keyboard_maker(2, **keyboard)
+    continue_menu = keyboard_maker(1, **keyboard)
     
     bot.answer_callback_query(call.id)
     bot.edit_message_text(text=rare_card[4],
@@ -272,28 +311,50 @@ def call_collection_continue(call):
                         reply_markup=continue_menu)
 
 
-def call_collection_menu(call):
-    '''Главное меню коллекции'''
-
-    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+def collection_menu(message, key):
+    '''
+    Создание главного меню и текста коллекции
     
+    :return:
+    '''
+
     # Получение информации о коллекции из базы данных
-    collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
+    collection_info = Fetch(message.chat.id, 'collections', 'collection')
     collection_name = collection_info.collection_attribute(key, 'name')
     collection_cards = collection_info.collection_attribute(key, 'cards')
     collection_date = collection_info.collection_attribute(key, 'date')
 
     # Создание меню коллекции
     keyboard = keyboard_format(Messages.COLLECTION_BUTTONS, collection=key)
-    collection_menu = keyboard_maker(2, **keyboard)
-    main_text = Messages.COLLECTION_MENU['INTERFACE'].format(collection_name,
+    menu = keyboard_maker(2, **keyboard)
+    text = Messages.COLLECTION_MENU['INTERFACE'].format(collection_name,
                                                         collection_cards,
                                                         collection_date[:16])
+    
+    return menu, text
+
+def call_collection_menu(call):
+    '''Изменение сообщения на меню коллекции'''
+
+    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    menu, text = collection_menu(call.message, key)
+
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(text=main_text,
+    bot.edit_message_text(text=text,
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=collection_menu)
+                        reply_markup=menu)
+
+def send_collection_menu(message, key):
+    '''Отправление меню коллекции'''
+
+    menu, text = collection_menu(message, key)
+    menu_message = bot.send_message(message.chat.id, text, reply_markup=menu)
+
+    # Обновление id сообщения Личного кабинета
+    update_menu_id = Update(message.chat.id)
+    update_menu_id.user_attribute('menu_id', menu_message.message_id)
+
 
 def call_rename_collection(call):
     '''Переименование коллекции'''
@@ -319,14 +380,14 @@ def rename_collection(message):
     if cancel_handler(message):
         return
     
-    # Получение названия коллекции для проверки на существование дубликата
-    # коллекции в базе данных
+    # Получение названия коллекции для проверки на существование
+    # дубликата коллекции в базе данных
     duplicate_name = Fetch(message.chat.id, 'collections', 'collection')
     result = duplicate_name.copy_check('name', message.text)
     
     if result:
         bot.send_message(message.chat.id, Messages.ERRORS[3])
-        bot.register_next_step_handler(message, collection_name)
+        bot.register_next_step_handler(message, rename_collection)
         return
 
     # Получение уникального ключа и старого названия коллекции
@@ -345,7 +406,7 @@ def rename_collection(message):
 
     text = Messages.COLLECTIONS['COLLECTION_RENAMED']
     bot.send_message(message.chat.id, text.format(old_name, message.text))
-    bot_private_office(message)
+    send_collection_menu(message, key)
 
 def call_delete_collection_menu(call):
     '''Меню удаления коллекции'''
@@ -394,18 +455,20 @@ def call_delete_collection_no(call):
     call_collection_menu(call)
 
 
-def call_cards_menu(call):
-    '''Карты определенной коллекции пользователя'''
 
-    key = re.findall(r'\w-\d+-\d+-\w', call.data)[0]
-    level = int(re.findall(r'_\w+-\d+-\d+-\w+_\w+_(\d+)', call.data)[0])
+def cards_menu(message, key, level):
+    '''
+    Карты определенной коллекции пользователя
+    
+    :return:
+    '''
 
     # Получение названия коллекции из базы данных
-    collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
+    collection_info = Fetch(message.chat.id, 'collections', 'collection')
     collection_name = collection_info.collection_attribute(key, 'name')
 
     # Получение информации о карте из базы данных
-    fetch_cards = Fetch(call.message.chat.id, 'collections', 'card')
+    fetch_cards = Fetch(message.chat.id, 'collections', 'card')
     cards_info = fetch_cards.user_cards(key)
     
     if cards_info:
@@ -421,14 +484,36 @@ def call_cards_menu(call):
 
     # Добавление кнопок выхода в меню
     keyboard = keyboard_format(Messages.CARDS_BUTTONS, collection=key)
-    cards_menu = keyboard_maker(2, cards_keyboard, **keyboard)
+    menu = keyboard_maker(2, cards_keyboard, **keyboard)
+    text = Messages.CARDS['INTERFACE'].format(collection_name)
+    
+    return menu, text
+
+def call_cards_menu(call, key=None, level=None):
+    '''Изменение сообщения на меню карт определенной коллекции'''
+    
+    if key == None:
+        key = re.findall(r'\w-\d+-\d+-\w', call.data)[0]
+    if level == None:
+        level = int(re.findall(r'_\w+-\d+-\d+-\w+_\w+_(\d+)', call.data)[0])
+    menu, text = cards_menu(call.message, key, level)
 
     bot.answer_callback_query(call.id)
-    text = Messages.CARDS['INTERFACE'].format(collection_name)
     bot.edit_message_text(text=text,
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=cards_menu)
+                        reply_markup=menu)
+
+def send_cards_menu(message, key):
+    '''Отправление меню карт определенной коллекции'''
+
+    menu, text = cards_menu(message, key, 0)
+    menu_message = bot.send_message(message.chat.id, text, reply_markup=menu)
+
+    # Обновление id сообщения Личного кабинета
+    update_menu_id = Update(message.chat.id)
+    update_menu_id.user_attribute('menu_id', menu_message.message_id)
+
 
 def call_create_card(call):
     '''Создание карты'''
@@ -519,16 +604,20 @@ def card_description(message):
 
     text = Messages.CARDS['CARD_CREATED']
     bot.send_message(message.chat.id, text.format(card_name))
-    bot_private_office(message)
+
+    send_cards_menu(message, key)
 
 
-def call_card_menu(call):
-    '''Главное меню карты'''
 
-    card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+def card_menu(message, card_key):
+    '''
+    Главное меню карты
+
+    :return:
+    '''
 
     # Получение информации о карте из базы данных
-    card_info = Fetch(call.message.chat.id, 'collections', 'card')
+    card_info = Fetch(message.chat.id, 'collections', 'card')
     card_name = card_info.card_attribute(card_key, 'name')
     key = card_info.card_attribute(card_key, 'key')
     card_description = card_info.card_attribute(card_key, 'description')
@@ -537,16 +626,34 @@ def call_card_menu(call):
     keyboard = keyboard_format(buttons=Messages.CARD_ORIGINAL_MENU_BUTTONS,
                             card=card_key,
                             collection=key)
-    card_menu = keyboard_maker(2, **keyboard)
 
-    main_text = Messages.CARD_MENU['INTERFACE'].format(card_name,
-                                                    card_description)
+    menu = keyboard_maker(2, **keyboard)
+    text = Messages.CARD_MENU['INTERFACE'].format(card_name, card_description)
+    return menu, text
+
+def call_card_menu(call):
+    '''Изменение сообщения на главное меню карты'''
+
+    card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    menu, text = card_menu(call.message, card_key)
+
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(text=main_text,
+    bot.edit_message_text(text=text,
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=card_menu,
+                        reply_markup=menu,
                         parse_mode='Markdown')
+
+def send_card_menu(message, card_key):
+    '''Отправление главного меню карты'''
+
+    menu, text = card_menu(message, card_key)
+    menu_message = bot.send_message(message.chat.id, text, reply_markup=menu)
+
+    # Обновление id сообщения Личного кабинета
+    update_menu_id = Update(message.chat.id)
+    update_menu_id.user_attribute('menu_id', menu_message.message_id)
+
 
 def call_rename_card(call):
     '''Переименование карты'''
@@ -602,7 +709,7 @@ def rename_card(message):
 
     text = Messages.CARDS['CARD_RENAMED']
     bot.send_message(message.chat.id, text.format(old_name, message.text))
-    bot_private_office(message)
+    send_card_menu(message, card_key)
 
 def call_card_continue(call):
     '''Начало изучения карты'''
@@ -677,7 +784,7 @@ def edit_card_description(message):
     update_user_status.user_attribute('session', None)
 
     bot.send_message(message.chat.id, Messages.CARDS['CARD_EDITED'])
-    bot_private_office(message)
+    send_card_menu(message, card_key)
 
 def call_delete_card_menu(call):
     '''Меню удаления карты'''
@@ -718,7 +825,7 @@ def call_delete_card_yes(call):
 
     text = Messages.DELETE_CARD['DELETE_SUCCESSFUL'].format(card_name)
     bot.answer_callback_query(call.id, text, True)
-    call_collections_menu(call)
+    call_cards_menu(call, key, 0)
 
 def call_delete_card_no(call):
     '''Отмена удаления карты'''
@@ -744,7 +851,7 @@ def call_info_on(call):
     keyboard = keyboard_format(buttons=Messages.CARD_INFO_MENU_BUTTONS,
                             card=card_key,
                             collection=key)
-    card_menu = keyboard_maker(2, **keyboard)
+    menu = keyboard_maker(2, **keyboard)
 
     main_text = Messages.CARD_MENU['INFO_INTERFACE'].format(card_name,
                                                     card_description,
@@ -754,19 +861,9 @@ def call_info_on(call):
     bot.edit_message_text(text=main_text,
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=card_menu,
+                        reply_markup=menu,
                         parse_mode='Markdown')
 
-
-def call_home(call):
-    '''Возвращение в личный кабинет пользователя'''
-
-    bot.answer_callback_query(call.id)
-    private_office_menu = keyboard_maker(**Messages.PRIVATE_OFFICE_BUTTONS)
-    bot.edit_message_text(text=Messages.PRIVATE_OFFICE['INTERFACE'],
-                        chat_id=call.message.chat.id,
-                        message_id=call.message.message_id,
-                        reply_markup=private_office_menu)
 
 
 def keyboard_maker(row_width=3, keyboard=None, **buttons):
@@ -926,6 +1023,7 @@ def cancel_handler(message):
         return True
 
     return False
+
 
 
 if __name__ == '__main__':
