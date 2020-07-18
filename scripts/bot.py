@@ -148,15 +148,15 @@ def call_profile_menu(call):
 
     # Получение информации о пользователе
     user_info = Fetch(call.message.chat.id)
-    user_username = user_info.user_attribute('username')
+    username = user_info.user_attribute('username')
+    karma = user_info.user_attribute('karma')
     collections = user_info.user_attribute('collections')
     cards = user_info.user_attribute('cards')
     
     # Создание меню профиля пользователя
     profile_menu = keyboard_maker(1, **Messages.PROFILE_BUTTONS)
-    main_text = Messages.PROFILE['INTERFACE'].format(user_username,
-                                                    collections,
-                                                    cards)
+    main_text = Messages.PROFILE['INTERFACE'].format(username, karma,
+                                                    collections, cards)
     bot.answer_callback_query(call.id)
     bot.edit_message_text(text=main_text,
                         chat_id=call.message.chat.id,
@@ -255,7 +255,15 @@ def collection_name(message):
 
     if cancel_handler(message):
         return
-    
+
+    # Проверка на существование коллекции со схожим ключом
+    available_collection = Fetch(message.chat.id, 'collections', 'collection')
+    copy_key = available_collection.general_collection(message.text, 'key')
+
+    if copy_key:
+        copy_user_collection(message)
+        return
+
     # Проверка на существование дубликата коллекции в базе данных
     duplicate_name = Fetch(message.chat.id, 'collections', 'collection')
     result = duplicate_name.copy_check('name', message.text)
@@ -282,6 +290,54 @@ def collection_name(message):
     text = Messages.COLLECTIONS['COLLECTION_CREATED']
     bot.send_message(message.chat.id, text.format(message.text))
     send_collections_menu(message)
+
+def copy_user_collection(message):
+    '''Создание копии коллекции пользователя по ключу'''
+
+    # Получение копии имени и количества карт коллекции
+    available_collection = Fetch(message.chat.id, 'collections', 'collection')
+    copy_name = available_collection.general_collection(message.text, 'name')
+    copy_cards = available_collection.general_collection(message.text, 'cards')
+    generous = available_collection.general_collection(message.text, 'user_id')
+
+    # Проверка на существование дубликата коллекции в базе данных
+    duplicate_name = Fetch(message.chat.id, 'collections', 'collection')
+    result = duplicate_name.copy_check('name', f'{copy_name} (Копия)')
+    
+    if result:
+        bot.send_message(message.chat.id, Messages.ERRORS[9])
+        bot.register_next_step_handler(message, copy_user_collection)
+        return
+
+    # Получение уникального ключа коллекции из базы данных
+    user_status = Fetch(message.chat.id)
+    key = user_status.user_attribute('session')
+
+    # Создание копии карт оригинальной коллекции
+    copy = Insert(message.chat.id, 'collections', 'card')
+    copy.copy_collection(message.text, key)
+    
+    # Запись названия коллекции и количества карт в базу данных
+    insert_name = Update(message.chat.id, 'collections', 'collection')
+    insert_name.collection_attribute(key, 'name', f'{copy_name} (Копия)')
+    insert_name.collection_attribute(key, 'cards', copy_cards)
+
+    # Обовление статуса пользователя
+    update_user_status = Update(message.chat.id)
+    update_user_status.user_attribute('action', 0)
+    update_user_status.user_attribute('session', None)
+    update_user_status.change_user_attribute('collections', 1)
+    update_user_status.change_user_attribute('cards', copy_cards)
+
+    # +Карма пользователю, чью коллекцию скопировали
+    if generous != message.chat.id:
+        generous_karma = Update(generous)
+        generous_karma.change_user_attribute('karma', 1)
+
+    text = Messages.COLLECTIONS['COLLECTION_COPIED']
+    bot.send_message(message.chat.id, text.format(copy_name))
+    send_collections_menu(message)
+
 
 def call_collection_continue(call):
     '''Программа обучения'''
@@ -321,6 +377,7 @@ def collection_menu(message, key):
     # Получение информации о коллекции из базы данных
     collection_info = Fetch(message.chat.id, 'collections', 'collection')
     collection_name = collection_info.collection_attribute(key, 'name')
+    collection_key = collection_info.collection_attribute(key, 'key')
     collection_cards = collection_info.collection_attribute(key, 'cards')
     collection_date = collection_info.collection_attribute(key, 'date')
 
@@ -328,6 +385,7 @@ def collection_menu(message, key):
     keyboard = keyboard_format(Messages.COLLECTION_BUTTONS, collection=key)
     menu = keyboard_maker(2, **keyboard)
     text = Messages.COLLECTION_MENU['INTERFACE'].format(collection_name,
+                                                        collection_key,
                                                         collection_cards,
                                                         collection_date[:16])
     
@@ -343,13 +401,17 @@ def call_collection_menu(call):
     bot.edit_message_text(text=text,
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
+                        parse_mode='Markdown',
                         reply_markup=menu)
 
 def send_collection_menu(message, key):
     '''Отправление меню коллекции'''
 
     menu, text = collection_menu(message, key)
-    menu_message = bot.send_message(message.chat.id, text, reply_markup=menu)
+    menu_message = bot.send_message(chat_id=message.chat.id,
+                                    text=text,
+                                    parse_mode='Markdown',
+                                    reply_markup=menu)
 
     # Обновление id сообщения Личного кабинета
     update_menu_id = Update(message.chat.id)
