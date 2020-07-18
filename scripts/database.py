@@ -11,8 +11,8 @@ class Create:
                         (user_id integer, menu_id integer,
                         action integer, session text,
                         username text, first_name text,
-                        last_name text, collections integer,
-                        cards integer)''')
+                        last_name text, karma integer,
+                        collections integer, cards integer)''')
         connect.commit()
     
     def collections_db(self, db_name='collections', db_table='collection'):
@@ -47,7 +47,7 @@ class Insert:
 
     def new_user(self, menu_id=0, action=0,
                 session=None, username=None, first_name=None,
-                last_name=None, cards=0, collections=0):
+                last_name=None, karma=0, collections=0, cards=0):
         '''Запись нового пользователя в базу данных'''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -58,11 +58,11 @@ class Insert:
 
         if not fetch:
             cursor.execute(f'''INSERT INTO {self.db_table} 
-                        VALUES (?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
+                        VALUES (?,?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
                                                     action, session,
                                                     username, first_name,
-                                                    last_name, cards,
-                                                    collections))
+                                                    last_name, karma,
+                                                    collections, cards))
         
         connect.commit()
     
@@ -92,6 +92,30 @@ class Insert:
                                                 status))
         
         connect.commit()
+
+    def copy_collection(self, original_key='', key=''):
+        '''Копирование карт коллекции'''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT * FROM {self.db_table}
+                        WHERE key=?''', (original_key,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            connect = sqlite3.connect(f'{self.db_name}.db')
+            cursor = connect.cursor()
+
+            for card in fetch:
+                cursor.execute(f'''INSERT INTO {self.db_table} 
+                            VALUES (?,?,?,?,?,?,?)''', (self.user_id, key,
+                                                        card[2], card[3],
+                                                        card[4], card[5],
+                                                        0))
+            connect.commit()
+        else:
+            return None
 
 
 class Fetch:
@@ -245,6 +269,26 @@ class Fetch:
         else:
             return False
 
+    def general_collection(self, key='', attribute=''):
+        '''
+        Проверка на существование коллекции в базе данных
+        и получение определенных переменных это коллекции
+
+        :return: Значение переменной
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT {attribute} FROM {self.db_table}
+                        WHERE key=?''', (key,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch[0][0]
+        else:
+            return None
+
 
 class Update:
     def __init__(self, user_id=None, db_name='users', db_table='user'):
@@ -357,8 +401,3 @@ class Delete:
         cursor.execute(f'''DELETE FROM {self.db_table}
             WHERE (user_id=?) AND (card_key=?)''', (self.user_id, card_key))
         connect.commit()
-
-#create = Create()
-#create.users_db()
-#create.collections_db()
-#create.cards_db()
