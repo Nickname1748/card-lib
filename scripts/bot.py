@@ -143,6 +143,7 @@ def bot_callback_query(call):
         bot.send_message(call.message.chat.id, Messages.ASSISTANCE['LOADING'])
 
 
+
 def call_profile_menu(call):
     '''Профиль пользователя'''
 
@@ -154,14 +155,15 @@ def call_profile_menu(call):
     cards = user_info.user_attribute('cards')
     
     # Создание меню профиля пользователя
-    profile_menu = keyboard_maker(1, **Messages.PROFILE_BUTTONS)
-    main_text = Messages.PROFILE['INTERFACE'].format(username, karma,
-                                                    collections, cards)
+    menu = keyboard_maker(1, **Messages.PROFILE_BUTTONS)
+    text = Messages.PROFILE['INTERFACE'].format(username, karma,
+                                                collections, cards)
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(text=main_text,
+    bot.edit_message_text(text=text,
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=profile_menu)
+                        parse_mode='Markdown',
+                        reply_markup=menu)
 
 def call_home(call):
     '''Возвращение в личный кабинет пользователя'''
@@ -223,8 +225,6 @@ def send_collections_menu(message):
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
 
-
-
 def call_create_collection(call):
     '''Создание коллекции'''
 
@@ -249,6 +249,7 @@ def call_create_collection(call):
     bot.answer_callback_query(call.id, text, True)
     bot.send_message(call.message.chat.id, text)
     bot.register_next_step_handler(call.message, collection_name)
+
 
 def collection_name(message):
     '''Получение названия коллекции'''
@@ -338,7 +339,6 @@ def copy_user_collection(message):
     bot.send_message(message.chat.id, text.format(copy_name))
     send_collections_menu(message)
 
-
 def call_collection_continue(call):
     '''Программа обучения'''
 
@@ -365,7 +365,6 @@ def call_collection_continue(call):
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
                         reply_markup=continue_menu)
-
 
 def collection_menu(message, key):
     '''
@@ -416,7 +415,6 @@ def send_collection_menu(message, key):
     # Обновление id сообщения Личного кабинета
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
-
 
 def call_rename_collection(call):
     '''Переименование коллекции'''
@@ -576,7 +574,6 @@ def send_cards_menu(message, key):
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
 
-
 def call_create_card(call):
     '''Создание карты'''
 
@@ -600,6 +597,7 @@ def call_create_card(call):
     bot.answer_callback_query(call.id, text, True)
     bot.send_message(call.message.chat.id, text)
     bot.register_next_step_handler(call.message, card_name)
+
 
 def card_name(message):
     '''Получение названия карты'''
@@ -669,8 +667,6 @@ def card_description(message):
 
     send_cards_menu(message, key)
 
-
-
 def card_menu(message, card_key):
     '''
     Главное меню карты
@@ -715,7 +711,6 @@ def send_card_menu(message, card_key):
     # Обновление id сообщения Личного кабинета
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
-
 
 def call_rename_card(call):
     '''Переименование карты'''
@@ -970,10 +965,20 @@ def buttons_format(call, object_info, call_id=None, name_id=None):
     return buttons
 
 def keyboard_navigation(key, nav_obj, level=0, sep=8):
-    '''
-    Создание навигационной клавиатуры
+    '''Создание навигационной клавиатуры
     
-    :return: Клавиатура
+    :param key:
+    :type key: str
+    :param nav_obj: 
+    :type nav_obj: list
+    :param level:
+        (default is 0)
+    :type level: int
+    :param sep:
+        (default is 0)
+    :type sep: int
+    :returns: Клавиатура
+    :rtype: InlineKeyboardMarkup
     '''
     
     navigation = {0: '• {} •', 1: '{}', 'data': 'cards_{}_level_{}'}
@@ -1031,14 +1036,16 @@ def keyboard_navigation(key, nav_obj, level=0, sep=8):
     return keyboard
 
 def error_handler(message):
-    '''
-    Проверка на наличие ошибок
+    '''Проверка на наличие ошибок
     
-    :return:
+    :param message: Сообщение пользователя
+    :type message: Message
+    :returns: Информация о наличие ошибки
+    :rtype: bool
     '''
 
     # Получение информации о действиях пользователя
-    # и id его последнего Личного кабинета
+    # и ID его последнего Личного кабинета
     user_status = Fetch(message.chat.id)
     action = user_status.user_attribute('action')
     menu_id = user_status.user_attribute('menu_id')
@@ -1064,18 +1071,19 @@ def error_handler(message):
         return True
 
     elif message.message_id != menu_id and action != 1:
-        bot.edit_message_text(text=Messages.ERRORS[0],
-                            chat_id=message.chat.id,
-                            message_id=message.message_id)
+        text = Messages.ERRORS[0]
+        bot.edit_message_text(text, message.chat.id, message.message_id)
         return True
 
     return False
 
 def cancel_handler(message):
-    '''
-    Проверка на отмену операции
+    '''Проверка на отмену операции
 
-    :return:
+    :param message: Сообщение пользователя
+    :type message: Message
+    :returns: Информация об отмене операции
+    :rtype: bool
     '''
 
     if (not message.text
