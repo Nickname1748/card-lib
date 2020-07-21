@@ -3,7 +3,15 @@ import sqlite3
 
 class Create:
     def users_db(self, db_name='users', db_table='user'):
-        '''Создание базы данных пользователей'''
+        '''Создание базы данных пользователей.
+        
+        Parameters
+        ----------
+        db_name : str
+            Название базы данных (default is 'users').
+        db_table : str
+            Название таблицы базы данных (default is 'user').
+        '''
 
         connect = sqlite3.connect(f'{db_name}.db')
         cursor = connect.cursor()
@@ -16,7 +24,15 @@ class Create:
         connect.commit()
     
     def collections_db(self, db_name='collections', db_table='collection'):
-        '''Создание базы данных коллекций'''
+        '''Создание базы данных коллекций.
+        
+        Parameters
+        ----------
+        db_name : str
+            Название базы данных (default is 'collections').
+        db_table : str
+            Название таблицы базы данных (default is 'collection').
+        '''
 
         connect = sqlite3.connect(f'{db_name}.db')
         cursor = connect.cursor()
@@ -27,7 +43,15 @@ class Create:
         connect.commit()
 
     def cards_db(self, db_name='collections', db_table='card'):
-        '''Создание базы данных карт'''
+        '''Создание базы данных карт.
+
+        Parameters
+        ----------
+        db_name : str
+            Название базы данных (default is 'collections').
+        db_table : str
+            Название таблицы базы данных (default is 'card').
+        '''
 
         connect = sqlite3.connect(f'{db_name}.db')
         cursor = connect.cursor()
@@ -40,15 +64,40 @@ class Create:
 
 
 class Insert:
-    def __init__(self, user_id=None, db_name='users', db_table='user'):
+    def __init__(self, user_id, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
         self.db_table = db_table
 
-    def new_user(self, menu_id=0, action=0,
-                session=None, username=None, first_name=None,
-                last_name=None, karma=0, collections=0, cards=0):
-        '''Запись нового пользователя в базу данных'''
+    def new_user(self, menu_id=0,
+                action=0, session=None,
+                username=None, first_name=None,
+                last_name=None, karma=0,
+                collections=0, cards=0):
+        '''Запись нового пользователя в базу данных.
+
+        Parameters
+        ----------
+        menu_id : int
+            ID последнего Личного кабинета пользователя (default is 0).
+        action : int
+            Активность пользователя (default is 0).
+        session : str
+            Текущая сессия пользователя: ключ коллекции
+            или ключ карты (default is None).
+        username : str
+            Ник пользователя (default is None).
+        first_name : str
+            Имя пользователя (default is None).
+        last_name : str
+            Фамилия пользователя (default is None).
+        karma : int
+            Бонусные очки пользователя (default is 0).
+        collections : int
+            Количество коллекций пользователя (default is 0).
+        cards : int
+            Количество карт пользователя (default is 0).
+        '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
@@ -58,7 +107,7 @@ class Insert:
 
         if not fetch:
             cursor.execute(f'''INSERT INTO {self.db_table} 
-                        VALUES (?,?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
+                    VALUES (?,?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
                                                     action, session,
                                                     username, first_name,
                                                     last_name, karma,
@@ -66,9 +115,20 @@ class Insert:
         
         connect.commit()
     
-    def create_collection(self, key='', date=None,
-                        name=None, cards=0):
-        '''Запись новой коллекции пользователя в базу данных'''
+    def create_collection(self, key, date=None, name=None, cards=0):
+        '''Запись новой коллекции пользователя в базу данных.
+        
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        date : str
+            Дата создания коллекции (default is None).
+        name : str
+            Имя коллекции (default is None).
+        cards : int
+            Количество карт в коллекции (default is 0).
+        '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
@@ -79,22 +139,46 @@ class Insert:
         
         connect.commit()
 
-    def create_card(self, key='', card_key='', date=None,
+    def create_card(self, key, card_key, date=None,
                     name=None, description=None, status=0):
-        '''Запись новой карты пользователя в базу данных'''
+        '''Запись новой карты пользователя в базу данных.
+        
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        card_key : str
+            Уникальный ключ карты.
+        date : str
+            Дата создания карты (default is None).
+        name : str
+            Имя карты (default is None).
+        description : str
+            Описание карты (default is None).
+        status : int
+            Статус карты (default is 0).
+        '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
         cursor.execute(f'''INSERT INTO {self.db_table} 
                         VALUES (?,?,?,?,?,?,?)''', (self.user_id, key,
-                                                card_key, date,
-                                                name, description,
-                                                status))
+                                                    card_key, date,
+                                                    name, description,
+                                                    status))
         
         connect.commit()
 
-    def copy_collection(self, original_key='', key=''):
-        '''Копирование карт коллекции'''
+    def copy_collection(self, original_key, key):
+        '''Копирование карт коллекции.
+
+        Parameters
+        ----------
+        original_key : str
+            Оригинальный ключ коллекции.
+        key : str
+            Новый ключ коллекции.
+        '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
@@ -109,27 +193,32 @@ class Insert:
 
             for card in fetch:
                 cursor.execute(f'''INSERT INTO {self.db_table} 
-                            VALUES (?,?,?,?,?,?,?)''', (self.user_id, key,
-                                                        card[2], card[3],
-                                                        card[4], card[5],
-                                                        0))
+                                VALUES (?,?,?,?,?,?,?)''', (self.user_id, key,
+                                                            card[2], card[3],
+                                                            card[4], card[5],
+                                                            0))
             connect.commit()
-        else:
-            return None
 
 
 class Fetch:
-    def __init__(self, user_id=None, db_name='users', db_table='user'):
+    def __init__(self, user_id, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
         self.db_table = db_table
 
-    def user_attribute(self, attribute=''):
-        '''
-        Получение какой-либо переменной пользователя из базы данных
+    def user_attribute(self, attribute):
+        '''Получение значения какой-либо переменной пользователя.
+
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной.
         
-        :param attribute:
-        :return: Значение переменной
+        Returns
+        -------
+        fetch : str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -144,14 +233,21 @@ class Fetch:
         else:
             return None
 
-    def collection_attribute(self, key='', attribute=''):
-        '''
-        Получение какой-либо переменной коллекции пользователя
-        из базы данных
-        
-        :param key: Уникальный ключ коллекции
-        :param attribute:
-        :return: Значение переменной
+    def collection_attribute(self, key, attribute):
+        '''Получение значения какой-либо переменной коллекции пользователя.
+
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной.
+
+        Returns
+        -------
+        fetch : str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -166,20 +262,28 @@ class Fetch:
         else:
             return None
 
-    def card_attribute(self, card_key='', attribute=''):
-        '''
-        Получение какой-либо переменной карты пользователя
-        из базы данных
-        
-        :param card_key: Уникальный ключ карты
-        :param attribute:
-        :return: Значение переменной
+    def card_attribute(self, card_key, attribute):
+        '''Получение значения какой-либо переменной карты пользователя.
+
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
+        attribute : str
+            Имя переменной.
+
+        Returns
+        -------
+        fetch : str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
         cursor.execute(f'''SELECT {attribute} FROM {self.db_table} 
-            WHERE (user_id=?) AND (card_key=?)''', (self.user_id, card_key))
+                        WHERE (user_id=?)
+                        AND (card_key=?)''', (self.user_id, card_key))
         fetch = cursor.fetchall()
         connect.commit()
 
@@ -189,10 +293,12 @@ class Fetch:
             return None
 
     def user_collections(self):
-        '''
-        Получение всех коллекций пользователя
+        '''Получение информации о всех коллекциях пользователя.
 
-        :return:
+        Returns
+        -------
+        fetch : list
+            Информация о всех коллекциях.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -207,11 +313,18 @@ class Fetch:
         else:
             return None
 
-    def user_cards(self, key=''):
-        '''
-        Получение всех карт из определенной коллекции пользователя
+    def user_cards(self, key):
+        '''Получение информации о всех картах определенной коллекции пользователя.
 
-        :return:
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        
+        Returns
+        -------
+        fetch : list
+            Информация о всех картах.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -226,12 +339,20 @@ class Fetch:
         else:
             return None
 
-    def copy_check(self, attribute='', value=0):
-        '''
-        Проверка на наличие схожих значений определенных переменных
-        в базе данных
+    def copy_check(self, attribute, value=0):
+        '''Проверка на наличие схожих значений определенных переменных.
         
-        :return: True/False
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной.
+        value : int
+            Значение переменной.
+
+        Returns
+        -------
+        bool
+            True, если совпадения найдены, False — если нет.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -247,12 +368,22 @@ class Fetch:
         else:
             return False
 
-    def card_copy_check(self, key='', attribute='', value=0):
-        '''
-        Проверка на наличие схожих значений определенных переменных
-        карт в базе данных
-        
-        :return: True/False
+    def card_copy_check(self, key, attribute, value=0):
+        '''Проверка на наличие схожих значений определенных переменных карт.
+
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции, в которой находится карта.
+        attribute : str
+            Имя переменной.
+        value : int
+            Значение переменной.
+
+        Returns
+        -------
+        bool
+            True, если совпадения найдены, False — если нет.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -269,12 +400,22 @@ class Fetch:
         else:
             return False
 
-    def general_collection(self, key='', attribute=''):
-        '''
-        Проверка на существование коллекции в базе данных
-        и получение определенных переменных это коллекции
+    def general_collection(self, key, attribute):
+        '''Проверка на существование коллекции и получение определенных
+        переменных этой коллекции.
 
-        :return: Значение переменной
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной.
+        
+        Returns
+        -------
+        fetch: str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -291,15 +432,20 @@ class Fetch:
 
 
 class Update:
-    def __init__(self, user_id=None, db_name='users', db_table='user'):
+    def __init__(self, user_id, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
         self.db_table = db_table
 
-    def user_attribute(self, attribute='', value=0):
-        '''
-        Обновление значения какой-либо переменной пользователя
-        в базе данных
+    def user_attribute(self, attribute, value=0):
+        '''Обновление значения переменной пользователя.
+
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Новое значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -308,38 +454,56 @@ class Update:
                         WHERE user_id=?''', (value, self.user_id))
         connect.commit()
 
-    def collection_attribute(self, key='',
-                            attribute='', value=0):
-        '''
-        Обновление значения какой-либо переменной коллекции
-        в базе данных
-        '''
+    def collection_attribute(self, key, attribute, value=0):
+        '''Обновление значения переменной коллекции.
 
-        connect = sqlite3.connect(f'{self.db_name}.db')
-        cursor = connect.cursor()
-        cursor.execute(f'''UPDATE {self.db_table} SET {attribute}=?
-                        WHERE (user_id=?) AND (key=?)''', (value, 
-                                                        self.user_id,
-                                                        key))
-        connect.commit()
-
-    def card_attribute(self, card_key='',
-                    attribute='', value=0):
-        '''
-        Обновление значения какой-либо переменной карты
-        в базе данных
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Новое значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
         cursor.execute(f'''UPDATE {self.db_table} SET {attribute}=?
-                        WHERE (user_id=?) AND (card_key=?)''', (value,
-                                                        self.user_id,
-                                                        card_key))
+                        WHERE (user_id=?)
+                        AND (key=?)''', (value, self.user_id, key))
         connect.commit()
 
-    def change_user_attribute(self, attribute='', value=0):
-        '''Изменение переменной с учетом её предыдущего значения'''
+    def card_attribute(self, card_key, attribute, value=0):
+        '''Обновление значения переменной карты.
+
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Новое значение переменной (default is 0).
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''UPDATE {self.db_table} SET {attribute}=?
+                        WHERE (user_id=?)
+                        AND (card_key=?)''', (value, self.user_id, card_key))
+        connect.commit()
+
+    def change_user_attribute(self, attribute, value=0):
+        '''Изменение переменной пользователя с учетом её предыдущего значения.
+        
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Величина, на которую изменится значение переменной (default is 0).
+        '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
@@ -348,8 +512,18 @@ class Update:
                         WHERE user_id=?''', (self.user_id,))
         connect.commit()
 
-    def change_collection_attribute(self, key='', attribute='', value=0):
-        '''Изменение переменной коллекции с учетом её предыдущего значения'''
+    def change_collection_attribute(self, key, attribute, value=0):
+        '''Изменение переменной коллекции с учетом её предыдущего значения.
+        
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Величина, на которую изменится значение переменной (default is 0).
+        '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
@@ -358,8 +532,18 @@ class Update:
                         WHERE (user_id=?) AND (key=?)''', (self.user_id, key))
         connect.commit()
 
-    def change_card_attribute(self, card_key='', attribute='', value=0):
-        '''Изменение переменной карты с учетом её предыдущего значения'''
+    def change_card_attribute(self, card_key, attribute, value=0):
+        '''Изменение переменной карты с учетом её предыдущего значения.
+
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Величина, на которую изменится значение переменной (default is 0).
+        '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
@@ -371,16 +555,18 @@ class Update:
 
 
 class Delete:
-    def __init__(self, user_id=None, db_name='users', db_table='user'):
+    def __init__(self, user_id, db_name='users', db_table='user'):
         self.user_id = user_id
         self.db_name = db_name
         self.db_table = db_table
 
-    def delete_collection(self, key=''):
-        '''
-        Удаление коллекции пользователя
-        
-        :param key: Уникальный ключ коллекции
+    def delete_collection(self, key):
+        '''Удаление коллекции пользователя.
+
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -389,15 +575,18 @@ class Delete:
                         WHERE (user_id=?) AND (key=?)''', (self.user_id, key))
         connect.commit()
 
-    def delete_card(self, card_key=''):
-        '''
-        Удаление коллекции пользователя
-        
-        :param card_key: Уникальный ключ карты
+    def delete_card(self, card_key):
+        '''Удаление карты из коллекции пользователя.
+
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
         cursor = connect.cursor()
         cursor.execute(f'''DELETE FROM {self.db_table}
-            WHERE (user_id=?) AND (card_key=?)''', (self.user_id, card_key))
+                        WHERE (user_id=?)
+                        AND (card_key=?)''', (self.user_id, card_key))
         connect.commit()

@@ -21,7 +21,7 @@ class Messages:
 
 
     PROFILE = {
-        'INTERFACE': 'Пользователь: @{}.\nКарма: {}.\nКоллекций: {}.\nКарт: {}.'
+        'INTERFACE': '*Пользователь:* @{}\n*Карма:* {}\n*Коллекций:* {}\n*Карт:* {}'
     }
 
     PROFILE_BUTTONS = {
@@ -31,7 +31,7 @@ class Messages:
 
 
     COLLECTIONS = {
-        'INTERFACE': 'Ваши коллекции.',
+        'INTERFACE': 'Ваши коллекции:',
         'CREATE_COLLECTION': 'Введите название или ключ коллекции.',
         'COLLECTION_CREATED': 'Вы создали коллекцию «{}».',
         'COLLECTION_COPIED': 'Вы добавили к себе коллекцию «{}».',
@@ -45,7 +45,7 @@ class Messages:
     }
 
     COLLECTION_MENU = {
-        'INTERFACE': 'Название: {}.\n\nКлюч коллекции: ```{}```.\n\nКарточек: {}.\n\nДата создания: {}.'
+        'INTERFACE': '*Название:* {}\n*Ключ коллекции:* ```{}```\n*Карточек:* {}\n*Дата создания:* {}'
     }
 
     COLLECTION_BUTTONS = {
@@ -76,7 +76,7 @@ class Messages:
 
 
     CARDS = {
-        'INTERFACE': 'Карты коллекция «{}»:',
+        'INTERFACE': 'Карты коллекции «{}»:',
         'CARD_NAME': 'Введите название карточки.',
         'CARD_DESCRIPTION': 'Введите описание карточки.',
         'CARD_CREATED': 'Вы создали карточку «{}».',
@@ -93,7 +93,7 @@ class Messages:
     
     CARD_MENU = {
         'INTERFACE': '{}\n\n{}\n\n',
-        'INFO_INTERFACE': 'Название: {}\n\nОписание: {}\n\nДата создания: {}.\n\nРейтинг карты: {}'
+        'INFO_INTERFACE': '*Название:* {}\n*Описание:* {}\n*Дата создания:* {}\n*Рейтинг карты:* {}'
     }
 
     CARD_RESULT_BUTTONS = {

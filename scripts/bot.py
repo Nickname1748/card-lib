@@ -143,6 +143,7 @@ def bot_callback_query(call):
         bot.send_message(call.message.chat.id, Messages.ASSISTANCE['LOADING'])
 
 
+
 def call_profile_menu(call):
     '''Профиль пользователя'''
 
@@ -154,17 +155,18 @@ def call_profile_menu(call):
     cards = user_info.user_attribute('cards')
     
     # Создание меню профиля пользователя
-    profile_menu = keyboard_maker(1, **Messages.PROFILE_BUTTONS)
-    main_text = Messages.PROFILE['INTERFACE'].format(username, karma,
-                                                    collections, cards)
+    menu = keyboard_maker(1, **Messages.PROFILE_BUTTONS)
+    text = Messages.PROFILE['INTERFACE'].format(username, karma,
+                                                collections, cards)
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(text=main_text,
+    bot.edit_message_text(text=text,
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=profile_menu)
+                        parse_mode='Markdown',
+                        reply_markup=menu)
 
 def call_home(call):
-    '''Возвращение в личный кабинет пользователя'''
+    '''Возвращение в Личный кабинет пользователя'''
 
     bot.answer_callback_query(call.id)
     private_office_menu = keyboard_maker(**Messages.PRIVATE_OFFICE_BUTTONS)
@@ -176,10 +178,17 @@ def call_home(call):
 
 
 def collections_menu(message):
-    '''
-    Создание меню коллекций пользователя
+    '''Создание меню коллекций пользователя.
     
-    :return:
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню коллекций.
     '''
 
     # Получение информации о коллекции из базы данных
@@ -223,8 +232,6 @@ def send_collections_menu(message):
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
 
-
-
 def call_create_collection(call):
     '''Создание коллекции'''
 
@@ -249,6 +256,7 @@ def call_create_collection(call):
     bot.answer_callback_query(call.id, text, True)
     bot.send_message(call.message.chat.id, text)
     bot.register_next_step_handler(call.message, collection_name)
+
 
 def collection_name(message):
     '''Получение названия коллекции'''
@@ -338,7 +346,6 @@ def copy_user_collection(message):
     bot.send_message(message.chat.id, text.format(copy_name))
     send_collections_menu(message)
 
-
 def call_collection_continue(call):
     '''Программа обучения'''
 
@@ -366,12 +373,22 @@ def call_collection_continue(call):
                         message_id=call.message.message_id,
                         reply_markup=continue_menu)
 
-
 def collection_menu(message, key):
-    '''
-    Создание главного меню и текста коллекции
+    '''Создание главного меню и текста коллекции.
+
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    key : str
+        Уникальный ключ коллекции. 
     
-    :return:
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню коллекции.
+    text : str
+        Текст интерфейса коллекции.
     '''
 
     # Получение информации о коллекции из базы данных
@@ -416,7 +433,6 @@ def send_collection_menu(message, key):
     # Обновление id сообщения Личного кабинета
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
-
 
 def call_rename_collection(call):
     '''Переименование коллекции'''
@@ -518,11 +534,22 @@ def call_delete_collection_no(call):
 
 
 
-def cards_menu(message, key, level):
-    '''
-    Карты определенной коллекции пользователя
+def cards_menu(message, key, level=0):
+    '''Карты определенной коллекции пользователя.
+
+    Parameters
+    ----------
+    key : str
+        Уникальный ключ коллекции.
+    level : int
+        Страница, на которой находится пользователь (default is 0).
     
-    :return:
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню коллекции.
+    text : str
+        Текст интерфейса коллекции.
     '''
 
     # Получение названия коллекции из базы данных
@@ -536,7 +563,7 @@ def cards_menu(message, key, level):
     if cards_info:
         # Добавление кнопок навигации в меню
         nav_obj = cards_info[8*level : 8*(level + 1)]
-        navigation = keyboard_navigation(key, cards_info, level)
+        navigation = keyboard_navigation(key, len(cards_info), level, 8)
 
         # Создание меню из всех карт определенной коллекции пользователя
         buttons = buttons_format('card_show_{}', nav_obj, 4, 2)
@@ -576,7 +603,6 @@ def send_cards_menu(message, key):
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
 
-
 def call_create_card(call):
     '''Создание карты'''
 
@@ -600,6 +626,7 @@ def call_create_card(call):
     bot.answer_callback_query(call.id, text, True)
     bot.send_message(call.message.chat.id, text)
     bot.register_next_step_handler(call.message, card_name)
+
 
 def card_name(message):
     '''Получение названия карты'''
@@ -669,13 +696,22 @@ def card_description(message):
 
     send_cards_menu(message, key)
 
-
-
 def card_menu(message, card_key):
-    '''
-    Главное меню карты
+    '''Создание главного меню карты.
 
-    :return:
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    card_key : str
+        Уникальный ключ карты.
+
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню карты.
+    text : str
+        Текст интерфейса карты.
     '''
 
     # Получение информации о карте из базы данных
@@ -715,7 +751,6 @@ def send_card_menu(message, card_key):
     # Обновление id сообщения Личного кабинета
     update_menu_id = Update(message.chat.id)
     update_menu_id.user_attribute('menu_id', menu_message.message_id)
-
 
 def call_rename_card(call):
     '''Переименование карты'''
@@ -897,7 +932,7 @@ def call_delete_card_no(call):
     call_card_menu(call)
 
 def call_info_on(call):
-    '''Показать дополнительную информацию о карте'''
+    '''Дополнительная информация о карте'''
 
     card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
 
@@ -929,10 +964,28 @@ def call_info_on(call):
 
 
 def keyboard_maker(row_width=3, keyboard=None, **buttons):
-    '''
-    Создание клавиатур меню
+    '''Создание клавиатуры меню.
+
+    Notes
+    -----
+        Учтите, что передавая в keyboard_maker готовую клавиатуру
+        её row_width не изменится, так как в таком случае метод
+        не создаст новую клавиатуру, а дополнит текущую новыми кнопками!
+
+    Parameters
+    ----------
+    row_width : int
+        Количество кнопок в строке (default is 3).
+    keyboard : InlineKeyboardMarkup, optional
+        Готовая клавиатура, в которую необходимо 
+        добавить кнопки (default is None).
+    **buttons
+        Кнопки, из которых будет состоять клавиатура.
     
-    :return: Клавиатура
+    Returns
+    -------
+    keyboard : InlineKeyboardMarkup
+        Готовая клавиатура.
     '''
 
     if not keyboard:
@@ -944,40 +997,75 @@ def keyboard_maker(row_width=3, keyboard=None, **buttons):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
-def keyboard_format(buttons, **format_object):
-    '''
-    Создание клавиатур с вставляемыми элементами
+def keyboard_format(buttons, **format_obj):
+    '''Создание клавиатуры с вставляемыми элементами.
+
+    Parameters
+    ----------    
+    buttons : list
+        Кнопки, из которых будет сделана клавиатура.
+    **format_obj
+        Вставляемые элементы.
     
-    :return: Клавиатура
+    Returns
+    -------
+    keyboard : dict
+        Готовая клавиатура.
     '''
 
     keyboard = {}
     for button in buttons:
-        keyboard[button] = buttons[button].format(**format_object)
+        keyboard[button] = buttons[button].format(**format_obj)
 
     return keyboard
 
-def buttons_format(call, object_info, call_id=None, name_id=None):
-    '''Создание кнопок с вставляемыми элементами
+def buttons_format(data, format_obj, name_id=0, data_id=0):
+    '''Создание кнопок с вставляемыми элементами.
+
+    Parameters
+    ----------
+    data : str
+        Строка навигации.
+    format_obj : list
+        Объект, из которого будут созданы кнопки.
+    name_id : int
+        ID имени кнопки (default is 0).
+    data_id : int
+        ID переменной, вставляемой в строку навигации (default is 0).
     
-    :return: Кнопки
+    Returns
+    -------
+    buttons : dict
+        Готовые кнопки.
     '''
 
     buttons = {}
-    for item in object_info:
-        buttons[item[call_id]] = call.format(item[name_id])
-            
+    for item in format_obj:
+        buttons[item[name_id]] = data.format(item[data_id])
+
     return buttons
 
-def keyboard_navigation(key, nav_obj, level=0, sep=8):
-    '''
-    Создание навигационной клавиатуры
+def keyboard_navigation(key, lenght, level=0, sep=8):
+    '''Создание навигационной клавиатуры.
+
+    Parameters
+    ----------
+    key : str
+        Уникальный ключ коллекции.
+    lenght : int
+        Длина списка элементов страницы.
+    level : int
+        Страница, на которой находится пользователь (default is 0).
+    sep : int
+        Количество элементов на странице (default is 8).
     
-    :return: Клавиатура
+    Returns
+    -------
+    keyboard : InlineKeyboardMarkup
+        Клавиатура с кнопками навигации.
     '''
     
     navigation = {0: '• {} •', 1: '{}', 'data': 'cards_{}_level_{}'}
-    lenght = len(nav_obj)
     system_len = lenght//sep if lenght%sep == 0 else lenght//sep + 1
 
     buttons = []
@@ -986,11 +1074,9 @@ def keyboard_navigation(key, nav_obj, level=0, sep=8):
     # Создание клавиатуры без навигации
     if lenght < 5*sep + 1:
         buttons = [types.InlineKeyboardButton(
-            text=navigation[0].format(button + 1)
-            if button == level
-            else navigation[1].format(button + 1),
+            text=navigation[not (button==level)].format(button + 1),
             callback_data=navigation['data'].format(key, button))
-            for button in range(system_len)]
+                for button in range(system_len)]
 
     # Создание клавиатуры с навигацией
     else:
@@ -1001,29 +1087,22 @@ def keyboard_navigation(key, nav_obj, level=0, sep=8):
                 nav[level] = '• {} •'
 
                 data = system_len if button == 4 else button + 1
-                text = nav[button].format(data)
 
             # Обработка последних двух кнопок
             elif level == (system_len - 1) or level == (system_len - 2):
                 nav = {0: '« {}', 1: '‹ {}', 2: '{}', 3: '{}', 4: '{}'}
-                nav[5 + level - system_len] = '• {} •'
+                nav[level - system_len + 5] = '• {} •'
 
                 data = button + 1 if button == 0 else system_len + button - 4
-                text = nav[button].format(data)
             
             # Обработка полной навигации
             else:
                 nav = {0: '« {}', 1: '‹ {}', 2: '• {} •', 3: '{} ›', 4: '{} »'}
 
-                if button == 0:
-                    data = button + 1
-                elif button == 1 or button == 2 or button == 3:
-                    data = level + button - 1
-                else:
-                    data = system_len
+                data = (1 if button == 0 else system_len
+                        if button == 4 else button + level - 1)
 
-                text = nav[button].format(data)
-
+            text = nav[button].format(data)
             buttons.append(types.InlineKeyboardButton(text=text,
                     callback_data=navigation['data'].format(key, data - 1)))
 
@@ -1031,14 +1110,21 @@ def keyboard_navigation(key, nav_obj, level=0, sep=8):
     return keyboard
 
 def error_handler(message):
-    '''
-    Проверка на наличие ошибок
-    
-    :return:
+    '''Проверка на наличие ошибок.
+
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+
+    Returns
+    -------
+    bool
+        True, если есть ошибка, False — если ошибок нет.
     '''
 
     # Получение информации о действиях пользователя
-    # и id его последнего Личного кабинета
+    # и ID его последнего Личного кабинета
     user_status = Fetch(message.chat.id)
     action = user_status.user_attribute('action')
     menu_id = user_status.user_attribute('menu_id')
@@ -1064,18 +1150,24 @@ def error_handler(message):
         return True
 
     elif message.message_id != menu_id and action != 1:
-        bot.edit_message_text(text=Messages.ERRORS[0],
-                            chat_id=message.chat.id,
-                            message_id=message.message_id)
+        text = Messages.ERRORS[0]
+        bot.edit_message_text(text, message.chat.id, message.message_id)
         return True
 
     return False
 
 def cancel_handler(message):
-    '''
-    Проверка на отмену операции
+    '''Проверка на отмену операции.
 
-    :return:
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    
+    Returns
+    -------
+    bool
+        True, если пользователь отменил операцию, False — если нет.
     '''
 
     if (not message.text
