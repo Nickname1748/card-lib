@@ -166,7 +166,7 @@ def call_profile_menu(call):
                         reply_markup=menu)
 
 def call_home(call):
-    '''Возвращение в личный кабинет пользователя'''
+    '''Возвращение в Личный кабинет пользователя'''
 
     bot.answer_callback_query(call.id)
     private_office_menu = keyboard_maker(**Messages.PRIVATE_OFFICE_BUTTONS)
@@ -178,10 +178,17 @@ def call_home(call):
 
 
 def collections_menu(message):
-    '''
-    Создание меню коллекций пользователя
+    '''Создание меню коллекций пользователя.
     
-    :return:
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню коллекций.
     '''
 
     # Получение информации о коллекции из базы данных
@@ -367,10 +374,21 @@ def call_collection_continue(call):
                         reply_markup=continue_menu)
 
 def collection_menu(message, key):
-    '''
-    Создание главного меню и текста коллекции
+    '''Создание главного меню и текста коллекции.
+
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    key : str
+        Уникальный ключ коллекции. 
     
-    :return:
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню коллекции.
+    text : str
+        Текст интерфейса коллекции.
     '''
 
     # Получение информации о коллекции из базы данных
@@ -516,11 +534,22 @@ def call_delete_collection_no(call):
 
 
 
-def cards_menu(message, key, level):
-    '''
-    Карты определенной коллекции пользователя
+def cards_menu(message, key, level=0):
+    '''Карты определенной коллекции пользователя.
+
+    Parameters
+    ----------
+    key : str
+        Уникальный ключ коллекции.
+    level : int
+        Страница, на которой находится пользователь (default is 0).
     
-    :return:
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню коллекции.
+    text : str
+        Текст интерфейса коллекции.
     '''
 
     # Получение названия коллекции из базы данных
@@ -534,7 +563,7 @@ def cards_menu(message, key, level):
     if cards_info:
         # Добавление кнопок навигации в меню
         nav_obj = cards_info[8*level : 8*(level + 1)]
-        navigation = keyboard_navigation(key, cards_info, level)
+        navigation = keyboard_navigation(key, len(cards_info), level, 8)
 
         # Создание меню из всех карт определенной коллекции пользователя
         buttons = buttons_format('card_show_{}', nav_obj, 4, 2)
@@ -668,10 +697,21 @@ def card_description(message):
     send_cards_menu(message, key)
 
 def card_menu(message, card_key):
-    '''
-    Главное меню карты
+    '''Создание главного меню карты.
 
-    :return:
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    card_key : str
+        Уникальный ключ карты.
+
+    Returns
+    -------
+    menu : InlineKeyboardMarkup
+        Меню карты.
+    text : str
+        Текст интерфейса карты.
     '''
 
     # Получение информации о карте из базы данных
@@ -892,7 +932,7 @@ def call_delete_card_no(call):
     call_card_menu(call)
 
 def call_info_on(call):
-    '''Показать дополнительную информацию о карте'''
+    '''Дополнительная информация о карте'''
 
     card_key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
 
@@ -924,10 +964,28 @@ def call_info_on(call):
 
 
 def keyboard_maker(row_width=3, keyboard=None, **buttons):
-    '''
-    Создание клавиатур меню
+    '''Создание клавиатуры меню.
+
+    Notes
+    -----
+        Учтите, что передавая в keyboard_maker готовую клавиатуру
+        её row_width не изменится, так как в таком случае метод
+        не создаст новую клавиатуру, а дополнит текущую новыми кнопками!
+
+    Parameters
+    ----------
+    row_width : int
+        Количество кнопок в строке (default is 3).
+    keyboard : InlineKeyboardMarkup, optional
+        Готовая клавиатура, в которую необходимо 
+        добавить кнопки (default is None).
+    **buttons
+        Кнопки, из которых будет состоять клавиатура.
     
-    :return: Клавиатура
+    Returns
+    -------
+    keyboard : InlineKeyboardMarkup
+        Готовая клавиатура.
     '''
 
     if not keyboard:
@@ -939,50 +997,75 @@ def keyboard_maker(row_width=3, keyboard=None, **buttons):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
-def keyboard_format(buttons, **format_object):
-    '''
-    Создание клавиатур с вставляемыми элементами
+def keyboard_format(buttons, **format_obj):
+    '''Создание клавиатуры с вставляемыми элементами.
+
+    Parameters
+    ----------    
+    buttons : list
+        Кнопки, из которых будет сделана клавиатура.
+    **format_obj
+        Вставляемые элементы.
     
-    :return: Клавиатура
+    Returns
+    -------
+    keyboard : dict
+        Готовая клавиатура.
     '''
 
     keyboard = {}
     for button in buttons:
-        keyboard[button] = buttons[button].format(**format_object)
+        keyboard[button] = buttons[button].format(**format_obj)
 
     return keyboard
 
-def buttons_format(call, object_info, call_id=None, name_id=None):
-    '''Создание кнопок с вставляемыми элементами
+def buttons_format(data, format_obj, name_id=0, data_id=0):
+    '''Создание кнопок с вставляемыми элементами.
+
+    Parameters
+    ----------
+    data : str
+        Строка навигации.
+    format_obj : list
+        Объект, из которого будут созданы кнопки.
+    name_id : int
+        ID имени кнопки (default is 0).
+    data_id : int
+        ID переменной, вставляемой в строку навигации (default is 0).
     
-    :return: Кнопки
+    Returns
+    -------
+    buttons : dict
+        Готовые кнопки.
     '''
 
     buttons = {}
-    for item in object_info:
-        buttons[item[call_id]] = call.format(item[name_id])
-            
+    for item in format_obj:
+        buttons[item[name_id]] = data.format(item[data_id])
+
     return buttons
 
-def keyboard_navigation(key, nav_obj, level=0, sep=8):
-    '''Создание навигационной клавиатуры
+def keyboard_navigation(key, lenght, level=0, sep=8):
+    '''Создание навигационной клавиатуры.
+
+    Parameters
+    ----------
+    key : str
+        Уникальный ключ коллекции.
+    lenght : int
+        Длина списка элементов страницы.
+    level : int
+        Страница, на которой находится пользователь (default is 0).
+    sep : int
+        Количество элементов на странице (default is 8).
     
-    :param key:
-    :type key: str
-    :param nav_obj: 
-    :type nav_obj: list
-    :param level:
-        (default is 0)
-    :type level: int
-    :param sep:
-        (default is 0)
-    :type sep: int
-    :returns: Клавиатура
-    :rtype: InlineKeyboardMarkup
+    Returns
+    -------
+    keyboard : InlineKeyboardMarkup
+        Клавиатура с кнопками навигации.
     '''
     
     navigation = {0: '• {} •', 1: '{}', 'data': 'cards_{}_level_{}'}
-    lenght = len(nav_obj)
     system_len = lenght//sep if lenght%sep == 0 else lenght//sep + 1
 
     buttons = []
@@ -991,11 +1074,9 @@ def keyboard_navigation(key, nav_obj, level=0, sep=8):
     # Создание клавиатуры без навигации
     if lenght < 5*sep + 1:
         buttons = [types.InlineKeyboardButton(
-            text=navigation[0].format(button + 1)
-            if button == level
-            else navigation[1].format(button + 1),
+            text=navigation[not (button==level)].format(button + 1),
             callback_data=navigation['data'].format(key, button))
-            for button in range(system_len)]
+                for button in range(system_len)]
 
     # Создание клавиатуры с навигацией
     else:
@@ -1006,29 +1087,22 @@ def keyboard_navigation(key, nav_obj, level=0, sep=8):
                 nav[level] = '• {} •'
 
                 data = system_len if button == 4 else button + 1
-                text = nav[button].format(data)
 
             # Обработка последних двух кнопок
             elif level == (system_len - 1) or level == (system_len - 2):
                 nav = {0: '« {}', 1: '‹ {}', 2: '{}', 3: '{}', 4: '{}'}
-                nav[5 + level - system_len] = '• {} •'
+                nav[level - system_len + 5] = '• {} •'
 
                 data = button + 1 if button == 0 else system_len + button - 4
-                text = nav[button].format(data)
             
             # Обработка полной навигации
             else:
                 nav = {0: '« {}', 1: '‹ {}', 2: '• {} •', 3: '{} ›', 4: '{} »'}
 
-                if button == 0:
-                    data = button + 1
-                elif button == 1 or button == 2 or button == 3:
-                    data = level + button - 1
-                else:
-                    data = system_len
+                data = (1 if button == 0 else system_len
+                        if button == 4 else button + level - 1)
 
-                text = nav[button].format(data)
-
+            text = nav[button].format(data)
             buttons.append(types.InlineKeyboardButton(text=text,
                     callback_data=navigation['data'].format(key, data - 1)))
 
@@ -1036,12 +1110,17 @@ def keyboard_navigation(key, nav_obj, level=0, sep=8):
     return keyboard
 
 def error_handler(message):
-    '''Проверка на наличие ошибок
-    
-    :param message: Сообщение пользователя
-    :type message: Message
-    :returns: Информация о наличие ошибки
-    :rtype: bool
+    '''Проверка на наличие ошибок.
+
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+
+    Returns
+    -------
+    bool
+        True, если есть ошибка, False — если ошибок нет.
     '''
 
     # Получение информации о действиях пользователя
@@ -1078,12 +1157,17 @@ def error_handler(message):
     return False
 
 def cancel_handler(message):
-    '''Проверка на отмену операции
+    '''Проверка на отмену операции.
 
-    :param message: Сообщение пользователя
-    :type message: Message
-    :returns: Информация об отмене операции
-    :rtype: bool
+    Parameters
+    ----------
+    message : Message
+        Сообщение пользователя.
+    
+    Returns
+    -------
+    bool
+        True, если пользователь отменил операцию, False — если нет.
     '''
 
     if (not message.text
