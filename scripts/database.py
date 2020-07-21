@@ -3,12 +3,14 @@ import sqlite3
 
 class Create:
     def users_db(self, db_name='users', db_table='user'):
-        '''Создание базы данных пользователей
+        '''Создание базы данных пользователей.
         
-        :param db_name: Название базы данных
-        :type db_name: str
-        :param db_table: Название таблицы в базе данных
-        :type db_table: str
+        Parameters
+        ----------
+        db_name : str
+            Название базы данных (default is 'users').
+        db_table : str
+            Название таблицы базы данных (default is 'user').
         '''
 
         connect = sqlite3.connect(f'{db_name}.db')
@@ -22,12 +24,14 @@ class Create:
         connect.commit()
     
     def collections_db(self, db_name='collections', db_table='collection'):
-        '''Создание базы данных коллекций
+        '''Создание базы данных коллекций.
         
-        :param db_name: Название базы данных
-        :type db_name: str
-        :param db_table: Название таблицы в базе данных
-        :type db_table: str
+        Parameters
+        ----------
+        db_name : str
+            Название базы данных (default is 'collections').
+        db_table : str
+            Название таблицы базы данных (default is 'collection').
         '''
 
         connect = sqlite3.connect(f'{db_name}.db')
@@ -39,12 +43,14 @@ class Create:
         connect.commit()
 
     def cards_db(self, db_name='collections', db_table='card'):
-        '''Создание базы данных карт
-        
-        :param db_name: Название базы данных
-        :type db_name: str
-        :param db_table: Название таблицы в базе данных
-        :type db_table: str
+        '''Создание базы данных карт.
+
+        Parameters
+        ----------
+        db_name : str
+            Название базы данных (default is 'collections').
+        db_table : str
+            Название таблицы базы данных (default is 'card').
         '''
 
         connect = sqlite3.connect(f'{db_name}.db')
@@ -68,35 +74,29 @@ class Insert:
                 username=None, first_name=None,
                 last_name=None, karma=0,
                 collections=0, cards=0):
-        '''Запись нового пользователя в базу данных
+        '''Запись нового пользователя в базу данных.
 
-        :param menu_id: ID последнего Личного кабинета
-            (default is 0)
-        :type menu_id: int
-        :param action: Активность пользователя
-            (default is 0)
-        :type action: int
-        :param session: Текущая сессия пользователя (ключ коллекции/карты)
-            (default is None)
-        :type session: str
-        :param username: Ник пользователя
-            (default is None)
-        :type username: str
-        :param first_name: Имя пользователя
-            (default is None)
-        :type first_name: str
-        :param last_name: Фамилия пользователя
-            (default is None)
-        :type last_name: str
-        :param karma: Бонусные очки пользователя
-            (default is 0)
-        :type karma: int
-        :param collections: Количество коллекций пользователя
-            (default is 0)
-        :type collections: int
-        :param cards: Количество карт пользователя
-            (default is 0)
-        :type cards: int
+        Parameters
+        ----------
+        menu_id : int
+            ID последнего Личного кабинета пользователя (default is 0).
+        action : int
+            Активность пользователя (default is 0).
+        session : str
+            Текущая сессия пользователя: ключ коллекции
+            или ключ карты (default is None).
+        username : str
+            Ник пользователя (default is None).
+        first_name : str
+            Имя пользователя (default is None).
+        last_name : str
+            Фамилия пользователя (default is None).
+        karma : int
+            Бонусные очки пользователя (default is 0).
+        collections : int
+            Количество коллекций пользователя (default is 0).
+        cards : int
+            Количество карт пользователя (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -116,19 +116,18 @@ class Insert:
         connect.commit()
     
     def create_collection(self, key, date=None, name=None, cards=0):
-        '''Запись новой коллекции пользователя в базу данных
+        '''Запись новой коллекции пользователя в базу данных.
         
-        :param key: Уникальный ключ коллекции
-        :type key: str
-        :param date: Дата создания коллекции
-            (default is None)
-        :type date: str
-        :param name: Имя коллекции
-            (default is None)
-        :type name: str
-        :param cards: Количество карт в коллекции
-            (default is 0)
-        :type cards: int
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        date : str
+            Дата создания коллекции (default is None).
+        name : str
+            Имя коллекции (default is None).
+        cards : int
+            Количество карт в коллекции (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -142,24 +141,22 @@ class Insert:
 
     def create_card(self, key, card_key, date=None,
                     name=None, description=None, status=0):
-        '''Запись новой карты пользователя в базу данных
+        '''Запись новой карты пользователя в базу данных.
         
-        :param key: Уникальный ключ коллекции
-        :type key: str
-        :param card_key: Уникальный ключ карты
-        :type card_key: str
-        :param date: Дата создания карты
-            (default is None)
-        :type date: str
-        :param name: Имя карты
-            (default is None)
-        :type name: str
-        :param description: Описание карты
-            (default is None)
-        :type description: str
-        :param status: Статус карты
-            (default is 0)
-        :type status: int
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        card_key : str
+            Уникальный ключ карты.
+        date : str
+            Дата создания карты (default is None).
+        name : str
+            Имя карты (default is None).
+        description : str
+            Описание карты (default is None).
+        status : int
+            Статус карты (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -173,12 +170,14 @@ class Insert:
         connect.commit()
 
     def copy_collection(self, original_key, key):
-        '''Копирование карт коллекции
-        
-        :param original_key: Оригинальный ключ коллекции
-        :type original_key: str
-        :param key: Новый ключ коллекции
-        :type key: str
+        '''Копирование карт коллекции.
+
+        Parameters
+        ----------
+        original_key : str
+            Оригинальный ключ коллекции.
+        key : str
+            Новый ключ коллекции.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -208,12 +207,18 @@ class Fetch:
         self.db_table = db_table
 
     def user_attribute(self, attribute):
-        '''Получение значения какой-либо переменной пользователя
+        '''Получение значения какой-либо переменной пользователя.
+
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной.
         
-        :param attribute: Имя переменной
-        :type attribute: str
-        :returns: Значение переменной
-        :rtype: str/int
+        Returns
+        -------
+        fetch : str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -229,14 +234,20 @@ class Fetch:
             return None
 
     def collection_attribute(self, key, attribute):
-        '''Получение значения какой-либо переменной коллекции пользователя
-        
-        :param key: Уникальный ключ коллекции
-        :type key: str
-        :param attribute: Имя переменной
-        :type attribute: str
-        :returns: Значение переменной
-        :rtype: str/int
+        '''Получение значения какой-либо переменной коллекции пользователя.
+
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной.
+
+        Returns
+        -------
+        fetch : str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -252,14 +263,20 @@ class Fetch:
             return None
 
     def card_attribute(self, card_key, attribute):
-        '''Получение значения какой-либо переменной карты пользователя
-        
-        :param card_key: Уникальный ключ карты
-        :type card_key: str
-        :param attribute: Имя переменной
-        :type attribute: str
-        :returns: Значение переменной
-        :rtype: str/int
+        '''Получение значения какой-либо переменной карты пользователя.
+
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
+        attribute : str
+            Имя переменной.
+
+        Returns
+        -------
+        fetch : str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -276,10 +293,12 @@ class Fetch:
             return None
 
     def user_collections(self):
-        '''Получение информации о всех коллекциях пользователя
+        '''Получение информации о всех коллекциях пользователя.
 
-        :returns: Информация о всех коллекциях
-        :rtype: list
+        Returns
+        -------
+        fetch : list
+            Информация о всех коллекциях.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -295,12 +314,17 @@ class Fetch:
             return None
 
     def user_cards(self, key):
-        '''Получение информации о всех картах определенной коллекции пользователя
+        '''Получение информации о всех картах определенной коллекции пользователя.
 
-        :param key: Уникальный ключ коллекции
-        :type key: str
-        :returns: Информация о всех картах
-        :rtype: list
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        
+        Returns
+        -------
+        fetch : list
+            Информация о всех картах.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -316,14 +340,19 @@ class Fetch:
             return None
 
     def copy_check(self, attribute, value=0):
-        '''Проверка на наличие схожих значений определенных переменных
+        '''Проверка на наличие схожих значений определенных переменных.
         
-        :param attribute: Имя переменной
-        :type attribute: str
-        :param value: Значение переменной
-        :type value: int
-        :returns: True/False
-        :rtype: bool
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной.
+        value : int
+            Значение переменной.
+
+        Returns
+        -------
+        bool
+            True, если совпадения найдены, False — если нет.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -340,16 +369,21 @@ class Fetch:
             return False
 
     def card_copy_check(self, key, attribute, value=0):
-        '''Проверка на наличие схожих значений определенных переменных карт
-        
-        :param key: Уникальный ключ коллекции, в которой находится карта
-        :type key: str
-        :param attribute: Имя переменной
-        :type attribute: str
-        :param value: Значение переменной
-        :type value: int
-        :returns: True/False
-        :rtype: bool
+        '''Проверка на наличие схожих значений определенных переменных карт.
+
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции, в которой находится карта.
+        attribute : str
+            Имя переменной.
+        value : int
+            Значение переменной.
+
+        Returns
+        -------
+        bool
+            True, если совпадения найдены, False — если нет.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -368,14 +402,20 @@ class Fetch:
 
     def general_collection(self, key, attribute):
         '''Проверка на существование коллекции и получение определенных
-        переменных этой коллекции
+        переменных этой коллекции.
 
-        :param key: Уникальный ключ коллекции
-        :type key: str
-        :param attribute: Имя переменной
-        :type attribute: str
-        :returns: Значение переменной
-        :rtype: str/int
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной.
+        
+        Returns
+        -------
+        fetch: str or int or None
+            Возвращает значение переменной. Возвращает None в том случае,
+            если переменная отсутствует в базе данных.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -398,13 +438,14 @@ class Update:
         self.db_table = db_table
 
     def user_attribute(self, attribute, value=0):
-        '''Обновление значения переменной пользователя
+        '''Обновление значения переменной пользователя.
 
-        :param attribute: Имя переменной, которую надо изменить
-        :type attribute: str
-        :param value: Новое значение переменной
-            (default is 0)
-        :type value: int
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Новое значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -414,15 +455,16 @@ class Update:
         connect.commit()
 
     def collection_attribute(self, key, attribute, value=0):
-        '''Обновление значения переменной коллекции
+        '''Обновление значения переменной коллекции.
 
-        :param key: Уникальный ключ коллекции
-        :type key: str
-        :param attribute: Имя переменной, которую надо изменить
-        :type attribute: str
-        :param value: Новое значение переменной
-            (default is 0)
-        :type value: int
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Новое значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -433,15 +475,16 @@ class Update:
         connect.commit()
 
     def card_attribute(self, card_key, attribute, value=0):
-        '''Обновление значения переменной карты
+        '''Обновление значения переменной карты.
 
-        :param card_key: Уникальный ключ карты
-        :type card_key: str
-        :param attribute: Имя переменной, которую надо изменить
-        :type attribute: str
-        :param value: Новое значение переменной
-            (default is 0)
-        :type value: int
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Новое значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -452,13 +495,14 @@ class Update:
         connect.commit()
 
     def change_user_attribute(self, attribute, value=0):
-        '''Изменение переменной пользователя с учетом её предыдущего значения
+        '''Изменение переменной пользователя с учетом её предыдущего значения.
         
-        :param attribute: Имя переменной, которую надо изменить
-        :type attribute: str
-        :param value: Величина, на которую изменится значение переменной
-            (default is 0)
-        :type value: int
+        Parameters
+        ----------
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Величина, на которую изменится значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -469,15 +513,16 @@ class Update:
         connect.commit()
 
     def change_collection_attribute(self, key, attribute, value=0):
-        '''Изменение переменной коллекции с учетом её предыдущего значения
+        '''Изменение переменной коллекции с учетом её предыдущего значения.
         
-        :param card_key: Уникальный ключ коллекции
-        :type card_key: str
-        :param attribute: Имя переменной, которую надо изменить
-        :type attribute: str
-        :param value: Величина, на которую изменится значение переменной
-            (default is 0)
-        :type value: int
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ коллекции.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Величина, на которую изменится значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -488,15 +533,16 @@ class Update:
         connect.commit()
 
     def change_card_attribute(self, card_key, attribute, value=0):
-        '''Изменение переменной карты с учетом её предыдущего значения
-        
-        :param card_key: Уникальный ключ карты
-        :type card_key: str
-        :param attribute: Имя переменной, которую надо изменить
-        :type attribute: str
-        :param value: Величина, на которую изменится значение переменной
-            (default is 0)
-        :type value: int
+        '''Изменение переменной карты с учетом её предыдущего значения.
+
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
+        attribute : str
+            Имя переменной, которую надо изменить.
+        value : int
+            Величина, на которую изменится значение переменной (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -515,10 +561,12 @@ class Delete:
         self.db_table = db_table
 
     def delete_collection(self, key):
-        '''Удаление коллекции пользователя
-        
-        :param key: Уникальный ключ коллекции
-        :type key: str
+        '''Удаление коллекции пользователя.
+
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -528,10 +576,12 @@ class Delete:
         connect.commit()
 
     def delete_card(self, card_key):
-        '''Удаление карты из коллекции пользователя
-        
-        :param card_key: Уникальный ключ карты
-        :type card_key: str
+        '''Удаление карты из коллекции пользователя.
+
+        Parameters
+        ----------
+        card_key : str
+            Уникальный ключ карты.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
