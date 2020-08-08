@@ -1,15 +1,16 @@
 import telebot
 from telebot import types
+from datetime import datetime, timedelta
+
+import re
+import random
+import locale
 
 from texts import Messages
 from config import Tokens
 from database import Insert, Fetch, Update, Delete
 
-import re
-import random
-
-from datetime import datetime
-
+locale.setlocale(locale.LC_ALL, "")
 bot = telebot.TeleBot(Tokens.TOKEN)
 
 @bot.message_handler(commands=['start'])
@@ -238,7 +239,8 @@ def call_create_collection(call):
     if error_handler(call.message) or cancel_handler(call.message):
         return
     
-    key = f'k-{random.randint(1, 1000000)}-{random.randint(1, 1000)}-n'
+    key = f'k-{random.randint(1, 1000000000)}'\
+        f'-{random.randint(1, 1000000000)}-n'
     date = datetime.now()
 
     # Обовление статуса пользователя
@@ -322,8 +324,9 @@ def copy_user_collection(message):
     key = user_status.user_attribute('session')
 
     # Создание копии карт оригинальной коллекции
+    date = datetime.now()
     copy = Insert(message.chat.id, 'collections', 'card')
-    copy.copy_collection(message.text, key)
+    copy.copy_collection(message.text, key, date)
     
     # Запись названия коллекции и количества карт в базу данных
     insert_name = Update(message.chat.id, 'collections', 'collection')
@@ -359,12 +362,20 @@ def call_collection_continue(call):
         bot.answer_callback_query(call.id, Messages.ERRORS[8], True)
         return
 
-    rare_card = sorted(cards, key=lambda item: item[6])[0]
+    # Выбор оптимыльной карты для повторения
+    rare_card = sorted(cards, key=lambda card: card[6])[0]
+    card_date = datetime.strptime(rare_card[6], '%Y-%m-%d %H:%M:%S.%f')
+
+    # Цикл повторения карт
+    if (card_date - datetime.now()).days >= 0:
+        text = Messages.CARDS['THE_END'].format(date_format(rare_card[6]))
+        bot.answer_callback_query(call.id, text, not ('result' in call.data))
 
     # Создание меню изучения карты
-    keyboard = keyboard_format(buttons=Messages.COLLECTION_CONTINUE_BUTTONS,
-                            card=rare_card[2],
-                            collection=rare_card[1])
+    keyboard = keyboard_format(
+                        buttons=Messages.COLLECTION_CONTINUE_BUTTONS,
+                        card=rare_card[2],
+                        collection=rare_card[1])
     continue_menu = keyboard_maker(1, **keyboard)
     
     bot.answer_callback_query(call.id)
@@ -402,16 +413,16 @@ def collection_menu(message, key):
     keyboard = keyboard_format(Messages.COLLECTION_BUTTONS, collection=key)
     menu = keyboard_maker(2, **keyboard)
     text = Messages.COLLECTION_MENU['INTERFACE'].format(collection_name,
-                                                        collection_key,
-                                                        collection_cards,
-                                                        collection_date[:16])
+                                                collection_key,
+                                                collection_cards,
+                                                date_format(collection_date))
     
     return menu, text
 
 def call_collection_menu(call):
     '''Изменение сообщения на меню коллекции'''
 
-    key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
+    key = re.findall(r'\w-\d+-\d+-\w', call.data)[0]
     menu, text = collection_menu(call.message, key)
 
     bot.answer_callback_query(call.id)
@@ -499,7 +510,8 @@ def call_delete_collection_menu(call):
     bot.edit_message_text(text=Messages.DELETE_COLLECTION['DELETE'],
                         chat_id=call.message.chat.id,
                         message_id=call.message.message_id,
-                        reply_markup=delete_collection)
+                        reply_markup=delete_collection,
+                        parse_mode='Markdown')
 
 def call_delete_collection_yes(call):
     '''Согласие на удаление коллекции'''
@@ -509,16 +521,24 @@ def call_delete_collection_yes(call):
     # Получение имени коллекции из базы данных
     collection_info = Fetch(call.message.chat.id, 'collections', 'collection')
     collection_name = collection_info.collection_attribute(key, 'name')
+    collection_cards = collection_info.collection_attribute(key, 'cards')
 
-    # Изменение количества коллекций в профиле пользователя
+    # Изменение количества коллекций и карт в профиле пользователя
     update_user_status = Update(call.message.chat.id)
     update_user_status.change_user_attribute('collections', -1)
+    update_user_status.change_user_attribute('cards', -int(collection_cards))
 
     # Удаление коллекции из базы данных
     delete_collection = Delete(user_id=call.message.chat.id,
                             db_name='collections',
                             db_table='collection')
     delete_collection.delete_collection(key)
+
+    # Удаление всех карт коллекции
+    delete_cards = Delete(user_id=call.message.chat.id,
+                        db_name='collections',
+                        db_table='card')
+    delete_cards.delete_collection_cards(key)
 
     text = Messages.DELETE_COLLECTION[
                     'DELETE_SUCCESSFUL'].format(collection_name)
@@ -610,7 +630,8 @@ def call_create_card(call):
         return
     
     key = re.findall(r'\w-\d+-\d+-\w+', call.data)[0]
-    card_key = f'c-{random.randint(1, 1000000)}-{random.randint(1, 1000)}-d'
+    card_key = f'c-{random.randint(1, 1000000000)}-' \
+            f'{random.randint(1, 1000000000)}-d'
     date = datetime.now()
 
     # Обовление статуса пользователя
@@ -746,7 +767,10 @@ def send_card_menu(message, card_key):
     '''Отправление главного меню карты'''
 
     menu, text = card_menu(message, card_key)
-    menu_message = bot.send_message(message.chat.id, text, reply_markup=menu)
+    menu_message = bot.send_message(chat_id=message.chat.id,
+                                    text=text,
+                                    reply_markup=menu,
+                                    parse_mode='Markdown')
 
     # Обновление id сообщения Личного кабинета
     update_menu_id = Update(message.chat.id)
@@ -834,12 +858,12 @@ def call_card_continue(call):
 def call_result(call):
     '''Переход к следующей карте'''
 
+    status = datetime.now() + timedelta(minutes=int(call.data[-4:]))
     card_key = re.findall(r'_\w-\d+-\d+-\w_(\w-\d+-\d+-\w)', call.data)[0]
-    score = int(call.data[-1])
 
     # Запись нового результата в базу данных
-    card_score = Update(call.message.chat.id, 'collections', 'card')
-    card_score.change_card_attribute(card_key, 'score', score)
+    card_status = Update(call.message.chat.id, 'collections', 'card')
+    card_status.card_attribute(card_key, 'status', status)
 
     call_collection_continue(call)
 
@@ -942,7 +966,7 @@ def call_info_on(call):
     key = card_info.card_attribute(card_key, 'key')
     card_description = card_info.card_attribute(card_key, 'description')
     card_date = card_info.card_attribute(card_key, 'date')
-    card_score = card_info.card_attribute(card_key, 'score')
+    card_status = card_info.card_attribute(card_key, 'status')
 
     # Создание меню карты
     keyboard = keyboard_format(buttons=Messages.CARD_INFO_MENU_BUTTONS,
@@ -952,8 +976,8 @@ def call_info_on(call):
 
     main_text = Messages.CARD_MENU['INFO_INTERFACE'].format(card_name,
                                                     card_description,
-                                                    card_date[:16],
-                                                    card_score)
+                                                    date_format(card_date),
+                                                    date_format(card_status))
     bot.answer_callback_query(call.id)
     bot.edit_message_text(text=main_text,
                         chat_id=call.message.chat.id,
@@ -1178,7 +1202,23 @@ def cancel_handler(message):
 
     return False
 
+def date_format(date):
+    '''Изменение формата даты.
 
+    Parameters
+    ----------
+    date : ste
+        Дата, которую нужно преобразовать.
+    
+    Returns
+    -------
+    new_date : str
+        Преобразованная дата.
+    '''
+
+    date_form = datetime.strptime(date, '%Y-%m-%d %H:%M:%S.%f')
+    new_date = date_form.strftime('%B %d (%A), %H:%M')
+    return new_date
 
 if __name__ == '__main__':
     bot.polling()
