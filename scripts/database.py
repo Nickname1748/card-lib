@@ -1,4 +1,5 @@
 import sqlite3
+import random
 
 
 class Create:
@@ -59,7 +60,7 @@ class Create:
                         (user_id integer, key text,
                         card_key integer, date text,
                         name text, description text,
-                        score integer)''')
+                        status text)''')
         connect.commit()
 
 
@@ -139,10 +140,10 @@ class Insert:
         
         connect.commit()
 
-    def create_card(self, key, card_key, date=None,
-                    name=None, description=None, status=0):
+    def create_card(self, key, card_key, date,
+                    name=None, description=None):
         '''Запись новой карты пользователя в базу данных.
-        
+
         Parameters
         ----------
         key : str
@@ -150,13 +151,11 @@ class Insert:
         card_key : str
             Уникальный ключ карты.
         date : str
-            Дата создания карты (default is None).
+            Дата создания карты.
         name : str
             Имя карты (default is None).
         description : str
             Описание карты (default is None).
-        status : int
-            Статус карты (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -165,11 +164,11 @@ class Insert:
                         VALUES (?,?,?,?,?,?,?)''', (self.user_id, key,
                                                     card_key, date,
                                                     name, description,
-                                                    status))
+                                                    date))
         
         connect.commit()
 
-    def copy_collection(self, original_key, key):
+    def copy_collection(self, original_key, key, date):
         '''Копирование карт коллекции.
 
         Parameters
@@ -178,6 +177,8 @@ class Insert:
             Оригинальный ключ коллекции.
         key : str
             Новый ключ коллекции.
+        date : str
+            Дата создания копии коллекции.
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -192,11 +193,13 @@ class Insert:
             cursor = connect.cursor()
 
             for card in fetch:
+                card_key = f'c-{random.randint(1, 1000000000)}-' \
+                        f'{random.randint(1, 1000000000)}-d'
                 cursor.execute(f'''INSERT INTO {self.db_table} 
-                                VALUES (?,?,?,?,?,?,?)''', (self.user_id, key,
-                                                            card[2], card[3],
-                                                            card[4], card[5],
-                                                            0))
+                        VALUES (?,?,?,?,?,?,?)''', (self.user_id, key,
+                                                    card_key, date,
+                                                    card[4], card[5],
+                                                    date))
             connect.commit()
 
 
@@ -574,6 +577,32 @@ class Delete:
         cursor.execute(f'''DELETE FROM {self.db_table}
                         WHERE (user_id=?) AND (key=?)''', (self.user_id, key))
         connect.commit()
+
+    def delete_collection_cards(self, key):
+        '''Удаление всех карт коллекции пользователя.
+
+        Parameters
+        ----------
+        key : str
+            Уникальный ключ коллекции.
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT * FROM {self.db_table}
+                        WHERE key=?''', (key,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            connect = sqlite3.connect(f'{self.db_name}.db')
+            cursor = connect.cursor()
+
+            for card in fetch:
+                cursor.execute(f'''DELETE FROM {self.db_table}
+                                WHERE (user_id=?)
+                                AND (key=?)''', (self.user_id, card[1]))
+            connect.commit()
 
     def delete_card(self, card_key):
         '''Удаление карты из коллекции пользователя.
