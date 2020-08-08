@@ -45,7 +45,7 @@ class Messages:
     }
 
     COLLECTION_MENU = {
-        'INTERFACE': '*Название:* {}\n*Ключ коллекции:* ```{}```\n*Карточек:* {}\n*Дата создания:* {}'
+        'INTERFACE': '*Название:*\n{}\n*Ключ коллекции:*\n```{}```\n*Карточек:* {}\n*Дата создания:*\n{}'
     }
 
     COLLECTION_BUTTONS = {
@@ -63,7 +63,7 @@ class Messages:
     }
 
     DELETE_COLLECTION = {
-        'DELETE': 'Вы точно хотите удалить коллекцию?',
+        'DELETE': 'Вы точно хотите удалить коллекцию?\n*Примечание.* Ваша коллекция останется у пользователей, скопировавших её!',
         'DELETE_SUCCESSFUL': 'Вы успешно удалили коллекцию «{}».',
         'DELETE_CANCELED': 'Удаление отменено.'
     }
@@ -83,7 +83,8 @@ class Messages:
         'RENAME_CARD': 'Введите новое название карточки.',
         'CARD_RENAMED': 'Вы переименовали карточку «{}» в карту «{}».',
         'EDIT_DESCRIPTION_CARD': 'Введите новое описание карточки.',
-        'CARD_EDITED': 'Вы успешно изменили описание карточки.'
+        'CARD_EDITED': 'Вы успешно изменили описание карточки.',
+        'THE_END': 'Вы повторили все запланированные карточки! Дата следующего повторения:\n{}.\nВы можете продолжить заниматься, дата повторения также будет меняться.'
     }
 
     CARDS_BUTTONS = {
@@ -93,13 +94,14 @@ class Messages:
     
     CARD_MENU = {
         'INTERFACE': '{}\n\n{}\n\n',
-        'INFO_INTERFACE': '*Название:* {}\n*Описание:* {}\n*Дата создания:* {}\n*Рейтинг карты:* {}'
+        'INFO_INTERFACE': '*Название:*\n{}\n*Описание:*\n{}\n*Дата создания:*\n{}\n*Дата следующего повторения:*\n{}'
     }
 
     CARD_RESULT_BUTTONS = {
-        'Отлично, запомнил (-а)!': 'card_result_{collection}_{card}_3',
-        'Надо будет повторить!': 'card_result_{collection}_{card}_1',
-        'Плохо помню эту карту!': 'card_result_{collection}_{card}_0'
+        'Очень легко (3 дня)': 'card_result_{collection}_{card}_4320',
+        'Легко (2 дня)': 'card_result_{collection}_{card}_2880',
+        'Приемлемо (День)': 'card_result_{collection}_{card}_1440',
+        'Трудно (10 минут)': 'card_result_{collection}_{card}_0010'
     }
 
     CARD_ORIGINAL_MENU_BUTTONS = {
