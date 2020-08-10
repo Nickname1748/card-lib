@@ -10,7 +10,7 @@ from texts import Messages
 from config import Tokens
 from database import Insert, Fetch, Update, Delete
 
-locale.setlocale(locale.LC_ALL, "")
+locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
 bot = telebot.TeleBot(Tokens.TOKEN)
 
 @bot.message_handler(commands=['start'])
@@ -1217,7 +1217,7 @@ def date_format(date):
     '''
 
     date_form = datetime.strptime(date, '%Y-%m-%d %H:%M:%S.%f')
-    new_date = date_form.strftime('%B %d (%A), %H:%M')
+    new_date = date_form.strftime('%d %B (%A), %H:%M')
     return new_date
 
 if __name__ == '__main__':
