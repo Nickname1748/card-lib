@@ -63,6 +63,40 @@ class Create:
                         status text)''')
         connect.commit()
 
+    def intents_db(self, db_name='intents', db_table='training_phrases'):
+        '''Creating a intents database.
+
+        Parameters
+        ----------
+        db_name : str
+            Database name (default is 'intents').
+        db_table : str
+            Database table name (default is 'training_phrases').
+        '''
+
+        connect = sqlite3.connect(f'{db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''CREATE TABLE {db_table}
+                        (name text, user_expression text)''')
+        connect.commit()
+
+    def responses_db(self, db_name='intents', db_table='responses'):
+        '''Creating a responses database.
+
+        Parameters
+        ----------
+        db_name : str
+            Database name (default is 'intents').
+        db_table : str
+            Database table name (default is 'responses').
+        '''
+
+        connect = sqlite3.connect(f'{db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''CREATE TABLE {db_table}
+                        (name text, text_response text)''')
+        connect.commit()
+
 
 class Insert:
     def __init__(self, user_id, db_name='users', db_table='user'):
@@ -201,6 +235,27 @@ class Insert:
                                                     card[4], card[5],
                                                     date))
             connect.commit()
+
+    def new_phrase(self, name, *text):
+        '''Writes a new phrase and its response to the database.
+
+        Parameters
+        ----------
+        name : str
+            Event key assigned to the phrase.
+        *text
+            Text that can serve as a call to a phrase
+            or a response to a phrase.
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+
+        for phrase in text:
+            cursor.execute(f'''INSERT INTO {self.db_table} 
+                            VALUES (?,?)''', (name, phrase))
+        
+        connect.commit()
 
 
 class Fetch:
@@ -430,6 +485,82 @@ class Fetch:
 
         if fetch:
             return fetch[0][0]
+        else:
+            return None
+
+    def intents_attribute(self):
+        '''Retrieves all information about bot phrases.
+
+        Returns
+        -------
+        fetch : list or None
+            Returns a list of bot phrases. Returns None
+            if the bot did not find phrases in the database.
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT * FROM {self.db_table}''')
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch
+        else:
+            return None
+
+    def responses_attribute(self, name):
+        '''Search for bot responses to user posts.
+
+        Parameters
+        ----------
+        name : str
+            Event key assigned to the phrase.
+
+        Returns
+        -------
+        fetch : list or None
+            Returns the bot's answer list. Returns None
+            if the bot did not find phrases in the database.
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT text_response FROM {self.db_table} 
+                        WHERE name=?''', (name,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch
+        else:
+            return None
+
+    def general_card(self, name):
+        '''Search for cards with a specific name in the database.
+
+        Parameters
+        ----------
+        name : str
+            Card name.
+
+        Returns
+        -------
+        fetch : tuple or None
+            Returns all information about the first matching card.
+            Returns None if there are no cards with
+            the given name in the collection.
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT * FROM {self.db_table}
+                        WHERE name=?''', (name,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch[0]
         else:
             return None
 
