@@ -1,9 +1,11 @@
 import telebot
 import locale
+import pyttsx3
 
 import tools
 import config
 import messages
+import conversation
 import database as db
 import card as card_py
 import collection as collection_py
@@ -28,7 +30,6 @@ def start(message):
                     last_name=message.from_user.last_name)
 
     bot.send_message(message.chat.id, messages.ASSISTANCE['START'])
-    private_office(message)
 
 @bot.message_handler(commands=['office'])
 def private_office(message):
@@ -80,6 +81,26 @@ def cancel(message):
 
     bot.send_message(message.chat.id, messages.ASSISTANCE['CANCEL'])
     private_office(message)
+
+@bot.message_handler(content_types=['text'])
+def dialog(message):
+    '''Answers the user to a question.
+        
+    Parameters
+    ----------
+    message : Message
+        User message.
+    '''
+
+    conv = conversation.Intents(message)
+    phrase = conv.phrase_handler()
+    bot.send_message(message.chat.id, phrase)
+
+    engine = pyttsx3.init()
+    engine.setProperty('voice', engine.getProperty('voices')[3].id)
+    engine.save_to_file(phrase, 'dboqp_bot.mp3')
+    engine.runAndWait()
+    bot.send_voice(message.chat.id, open('dboqp_bot.mp3', 'rb'))
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
