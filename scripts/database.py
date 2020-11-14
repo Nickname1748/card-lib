@@ -3,7 +3,8 @@ import sqlite3
 
 
 class Create:
-    def users_db(self, db_name='users', db_table='user'):
+    @staticmethod
+    def users_db(db_name='users', db_table='user'):
         '''Creating a user database.
 
         Parameters
@@ -21,10 +22,12 @@ class Create:
                         action integer, session text,
                         username text, first_name text,
                         last_name text, karma integer,
-                        collections integer, cards integer)''')
+                        collections integer, cards integer,
+                        voice integer)''')
         connect.commit()
 
-    def collections_db(self, db_name='collections', db_table='collection'):
+    @staticmethod
+    def collections_db(db_name='collections', db_table='collection'):
         '''Creating a collection database.
         
         Parameters
@@ -43,7 +46,8 @@ class Create:
                         cards integer)''')
         connect.commit()
 
-    def cards_db(self, db_name='collections', db_table='card'):
+    @staticmethod
+    def cards_db(db_name='collections', db_table='card'):
         '''Creating a card database.
 
         Parameters
@@ -63,7 +67,8 @@ class Create:
                         status text)''')
         connect.commit()
 
-    def intents_db(self, db_name='intents', db_table='training_phrases'):
+    @staticmethod
+    def intents_db(db_name='intents', db_table='training_phrases'):
         '''Creating a intents database.
 
         Parameters
@@ -80,7 +85,14 @@ class Create:
                         (name text, user_expression text)''')
         connect.commit()
 
-    def responses_db(self, db_name='intents', db_table='responses'):
+        connect = sqlite3.connect(f'{db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''INSERT INTO {db_table} 
+                        VALUES (?,?)''', ('error', 'Неизвестный запрос.'))
+        connect.commit()
+
+    @staticmethod
+    def responses_db(db_name='intents', db_table='responses'):
         '''Creating a responses database.
 
         Parameters
@@ -97,6 +109,12 @@ class Create:
                         (name text, text_response text)''')
         connect.commit()
 
+        connect = sqlite3.connect(f'{db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''INSERT INTO {db_table} 
+                        VALUES (?,?)''', ('error', 'Запрос не найден!'))
+        connect.commit()
+
 
 class Insert:
     def __init__(self, user_id, db_name='users', db_table='user'):
@@ -108,7 +126,7 @@ class Insert:
                 action=0, session=None,
                 username=None, first_name=None,
                 last_name=None, karma=0,
-                collections=0, cards=0):
+                collections=0, cards=0, voice=0):
         '''Writing a new user to the database.
 
         Parameters
@@ -132,6 +150,8 @@ class Insert:
             Number of user collections (default is 0).
         cards : int
             Number of user cards (default is 0).
+        voice : int
+            ID of voice assistant (default is 0).
         '''
 
         connect = sqlite3.connect(f'{self.db_name}.db')
@@ -142,11 +162,12 @@ class Insert:
 
         if not fetch:
             cursor.execute(f'''INSERT INTO {self.db_table} 
-                    VALUES (?,?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
-                                                    action, session,
-                                                    username, first_name,
-                                                    last_name, karma,
-                                                    collections, cards))
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)''', (self.user_id, menu_id,
+                                                        action, session,
+                                                        username, first_name,
+                                                        last_name, karma,
+                                                        collections, cards,
+                                                        voice))
         
         connect.commit()
     
@@ -564,6 +585,27 @@ class Fetch:
         else:
             return None
 
+    def all_user_cards(self):
+        '''ATTENTION! A really dangerous function!
+        Issues ALL user cards.
+
+        Returns
+        -------
+        fetch : list
+            Information about ALL cards.
+        '''
+
+        connect = sqlite3.connect(f'{self.db_name}.db')
+        cursor = connect.cursor()
+        cursor.execute(f'''SELECT * FROM {self.db_table}
+                        WHERE (user_id=?)''', (self.user_id,))
+        fetch = cursor.fetchall()
+        connect.commit()
+
+        if fetch:
+            return fetch
+        else:
+            return None
 
 class Update:
     def __init__(self, user_id, db_name='users', db_table='user'):
