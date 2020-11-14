@@ -29,7 +29,7 @@ def start(message):
                     first_name=message.from_user.first_name,
                     last_name=message.from_user.last_name)
 
-    bot.send_message(message.chat.id, messages.ASSISTANCE['START'])
+    private_office(message)
 
 @bot.message_handler(commands=['office'])
 def private_office(message):
@@ -96,11 +96,15 @@ def dialog(message):
     phrase = conv.phrase_handler()
     bot.send_message(message.chat.id, phrase)
 
+    fetch = db.Fetch(message.chat.id)
+    voice = fetch.user_attribute('voice')
+
     engine = pyttsx3.init()
-    engine.setProperty('voice', engine.getProperty('voices')[3].id)
-    engine.save_to_file(phrase, 'dboqp_bot.mp3')
+    if voice == 3: engine.setProperty('rate', 118)
+    engine.setProperty('voice', engine.getProperty('voices')[voice].id)
+    engine.save_to_file(phrase, f'dboqp_bot_{message.chat.id}.mp3')
     engine.runAndWait()
-    bot.send_voice(message.chat.id, open('dboqp_bot.mp3', 'rb'))
+    bot.send_voice(message.chat.id, open(f'dboqp_bot_{message.chat.id}.mp3', 'rb'))
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -111,6 +115,9 @@ def callback_query(call):
 
         elif call.data == 'profile':
             profile_menu(call)
+        
+        elif 'voice_mask' in call.data:
+            change_voice_mask(call)
 
         elif 'collection' in call.data:
             collections = collection_py.Collections(bot)
@@ -229,6 +236,30 @@ def profile_menu(call):
                         message_id=call.message.message_id,
                         parse_mode='Markdown',
                         reply_markup=menu)
+
+def change_voice_mask(call):
+    '''Change the voice mask of a specific user.
+
+    Parameters
+    ----------
+    call : CallbackQuery
+        Response to button press.
+    '''
+
+    mask_id = call.data.split('_')[2]
+
+    if (mask_id == '0') or (mask_id == '3'):
+        update = db.Update(call.message.chat.id)
+        update.user_attribute('voice', int(mask_id))
+        bot.answer_callback_query(call.id, 'Голосовая маска изменена!', True)
+    else:
+        bot.answer_callback_query(call.id)
+        menu = tools.Maker.keyboard(2, **messages.PROFILE['VOICE'])
+        bot.edit_message_text(text=messages.PROFILE['VOICE_INTERFACE'],
+                            chat_id=call.message.chat.id,
+                            message_id=call.message.message_id,
+                            reply_markup=menu)
+
 
 if __name__ == '__main__':
     bot.polling()

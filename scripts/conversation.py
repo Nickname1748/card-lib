@@ -1,6 +1,8 @@
 import re
 import random
+import difflib
 
+import messages
 import database as db
 
 
@@ -24,6 +26,7 @@ class Intents:
         fetch = db.Fetch(self.message.chat.id, 'intents', 'training_phrases')
         intents = fetch.intents_attribute()
 
+        # Finding key commands in a user's query.
         for intent in intents:
             if intent[1] in text:
                 actions[intent[0]] = intent[1]
@@ -34,11 +37,13 @@ class Intents:
         for key in actions:
             var_text = random.choice(fetch.responses_attribute(key))[0]
 
+            # Checking for the presence in the line of the command "find".
             if key == 'find':
                 phrases += f'{var_text} '.format(self._action(actions[key]))
             else:
-                phrases += f'{var_text}'
+                phrases += f'{var_text} '
 
+        # Selecting a random answer from the bot phrases database.
         if phrases == '':
             var_text = random.choice(fetch.responses_attribute('error'))[0]
             phrases = var_text
@@ -55,31 +60,61 @@ class Intents:
             or message about unrecognized text.
         '''
 
+        # Finding key phrases in a query with a colon.
         if re.findall(':', self.message.text):
             try:
-                google = re.findall(r'\: (.*)[\,\.\?\!]', self.message.text)[0]
+                response = re.findall(r'\: (.*)[\,\.\?\!]', self.message.text)[0]
             except:
-                google = re.findall(r'\: (.*)\b', self.message.text)[0]
+                try:
+                    response = re.findall(r'\: (.*)\b', self.message.text)[0]
+                except:
+                    response = 'error'
 
-            fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
-            card = fetch.general_card(google)
+            # Finding similarities between user cards and query.
+            try:
+                fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
+                all_cards = [i[4] for i in fetch.all_user_cards()]
+                card = difflib.get_close_matches(response, all_cards)
+            except:
+                return messages.ERRORS[10]
 
             if card:
+                fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
+                card = fetch.general_card(card[0])
                 return card[5]
 
+        # Finding key phrases in a query without a colon.
         elif ans in self.message.text.lower():
             try:
-                fr_text = fr'{ans.capitalize()} (.*)[\,\.\?\!]'
-                google = re.findall(fr_text, self.message.text)[0]
+                try:
+                    fr_text = fr'{ans} (.*)[\,\.\?\!]'
+                    response = re.findall(fr_text, self.message.text)[0]
+                except:
+                    fr_text = fr'{ans.capitalize()} (.*)[\,\.\?\!]'
+                    response = re.findall(fr_text, self.message.text)[0]
             except:
-                fr_text = fr'{ans.capitalize()} (.*)\b'
-                google = re.findall(fr_text, self.message.text)[0]
+                try:
+                    try:
+                        fr_text = fr'{ans} (.*)\b'
+                        response = re.findall(fr_text, self.message.text)[0]
+                    except:
+                        fr_text = fr'{ans.capitalize()} (.*)\b'
+                    response = re.findall(fr_text, self.message.text)[0]
+                except:
+                    response = 'error'
 
-            fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
-            card = fetch.general_card(google)
+            # Finding similarities between user cards and query.
+            try:
+                fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
+                all_cards = [i[4] for i in fetch.all_user_cards()]
+                card = difflib.get_close_matches(response, all_cards)
+            except:
+                return messages.ERRORS[10]
 
             if card:
+                fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
+                card = fetch.general_card(card[0])
                 return card[5]
 
-        return 'Я не нашел то, что вы искали.'
+        return messages.ERRORS[10]
 
