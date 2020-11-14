@@ -26,6 +26,7 @@ class Intents:
         fetch = db.Fetch(self.message.chat.id, 'intents', 'training_phrases')
         intents = fetch.intents_attribute()
 
+        # Finding key commands in a user's query.
         for intent in intents:
             if intent[1] in text:
                 actions[intent[0]] = intent[1]
@@ -36,11 +37,13 @@ class Intents:
         for key in actions:
             var_text = random.choice(fetch.responses_attribute(key))[0]
 
+            # Checking for the presence in the line of the command "find".
             if key == 'find':
                 phrases += f'{var_text} '.format(self._action(actions[key]))
             else:
                 phrases += f'{var_text} '
 
+        # Selecting a random answer from the bot phrases database.
         if phrases == '':
             var_text = random.choice(fetch.responses_attribute('error'))[0]
             phrases = var_text
@@ -57,6 +60,7 @@ class Intents:
             or message about unrecognized text.
         '''
 
+        # Finding key phrases in a query with a colon.
         if re.findall(':', self.message.text):
             try:
                 response = re.findall(r'\: (.*)[\,\.\?\!]', self.message.text)[0]
@@ -66,6 +70,7 @@ class Intents:
                 except:
                     response = 'error'
 
+            # Finding similarities between user cards and query.
             try:
                 fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
                 all_cards = [i[4] for i in fetch.all_user_cards()]
@@ -78,6 +83,7 @@ class Intents:
                 card = fetch.general_card(card[0])
                 return card[5]
 
+        # Finding key phrases in a query without a colon.
         elif ans in self.message.text.lower():
             try:
                 try:
@@ -97,6 +103,7 @@ class Intents:
                 except:
                     response = 'error'
 
+            # Finding similarities between user cards and query.
             try:
                 fetch = db.Fetch(self.message.chat.id, 'collections', 'card')
                 all_cards = [i[4] for i in fetch.all_user_cards()]
