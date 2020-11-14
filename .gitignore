@@ -10,4 +10,4 @@ collections.db
 intents.db
 
 # Additional files
-dboqp_bot.mp3
+*.mp3
