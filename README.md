@@ -8,7 +8,7 @@ $ pip install -r requirements.txt
 ```
 2. Create config.py using the prototype config-example.py and enter your Telegram token there.
 3. Create databases: users.db, collections.db and intents.db (class Create in database.py).
-4. Launch bot:
+4. Launch bot
 ```
 $ python bot.py
 ```
