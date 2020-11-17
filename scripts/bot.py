@@ -94,7 +94,7 @@ def dialog(message):
 
     conv = conversation.Intents(message)
     phrase = conv.phrase_handler()
-    bot.send_message(message.chat.id, phrase)
+    bot.send_message(message.chat.id, phrase, parse_mode='Markdown')
 
     fetch = db.Fetch(message.chat.id)
     voice = fetch.user_attribute('voice')
